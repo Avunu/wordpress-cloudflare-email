@@ -1,0 +1,15 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"ignorePatterns": [
+		"build",
+		"vendor",
+		"node_modules",
+		"package-lock.json",
+		"composer.json",
+		"composer.lock",
+		"release-please-config.json",
+		".release-please-manifest.json"
+	],
+	"useTabs": true,
+	"jsdoc": true
+}

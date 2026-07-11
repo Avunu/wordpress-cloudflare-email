@@ -1,9 +1,0 @@
-# Generated / externally-managed files oxfmt must not reformat.
-build
-vendor
-node_modules
-package-lock.json
-composer.json
-composer.lock
-release-please-config.json
-.release-please-manifest.json
