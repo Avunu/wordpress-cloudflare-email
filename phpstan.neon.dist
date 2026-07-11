@@ -1,0 +1,26 @@
+includes:
+    # Bootstraps php-stubs/wordpress-stubs and adds WordPress-aware rules
+    # (hook callback signatures, dynamic return types, WP constants).
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 8
+    phpVersion: 80400
+    paths:
+        - cloudflare-email.php
+        - src/
+    scanFiles:
+        - vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php
+        - vendor/php-stubs/wp-cli-stubs/wp-cli-commands-stubs.php
+    bootstrapFiles:
+        - phpstan-bootstrap.php
+    # PHPDoc types on third-party boundaries (PHPMailer, WP filters) are not
+    # runtime-enforced; keep defensive null-coalescing without false positives.
+    treatPhpDocTypesAsCertain: false
+    ignoreErrors:
+        # PucFactory::buildUpdateChecker() is typed as a broad union; narrowing it
+        # would require referencing the version-suffixed (v5pX) class names, which
+        # break on every plugin-update-checker minor release.
+        -
+            message: '#Call to an undefined method YahnisElsts\\PluginUpdateChecker.*#'
+            path: cloudflare-email.php
