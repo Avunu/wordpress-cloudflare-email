@@ -5,6 +5,10 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     composition-c4.url = "github:fossar/composition-c4";
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -13,6 +17,7 @@
       nixpkgs,
       flake-utils,
       composition-c4,
+      git-hooks,
     }:
     flake-utils.lib.eachDefaultSystem (
       system:
@@ -24,7 +29,7 @@
         inherit (pkgs) lib stdenvNoCC;
 
         php = pkgs.php84.buildEnv {
-          extensions = (
+          extensions =
             { enabled, all }:
             enabled
             ++ (with all; [
@@ -33,8 +38,7 @@
               openssl
               tokenizer
               fileinfo
-            ])
-          );
+            ]);
           # PHPStan parses the full WordPress stubs; the 128M default is not enough.
           extraConfig = ''
             memory_limit = 2G
@@ -43,10 +47,72 @@
 
         nodejs = pkgs.nodejs_22;
 
+        # -------------------------------------------------------------- #
+        # git-hooks.nix: installs a pre-commit hook (via the direnv/     #
+        # devShell) that runs the same formatting/lint/typecheck as      #
+        # `npm run check`, plus PHPStan, before every commit.             #
+        #                                                                 #
+        # Not wired into `checks` (nix flake check): the JS hooks shell   #
+        # out to ./node_modules/.bin/* for exact toolchain parity with    #
+        # npm, but node_modules is gitignored and so absent from the      #
+        # hermetic source `git-hooks.nix` would use to build a check.     #
+        # `checks.phpstan` below already covers PHPStan hermetically.     #
+        # -------------------------------------------------------------- #
+        pre-commit-check = git-hooks.lib.${system}.run {
+          src = self;
+          hooks = {
+            oxfmt = {
+              enable = true;
+              package = null;
+              settings.binPath = "./node_modules/.bin/oxfmt";
+            };
+
+            oxlint = {
+              enable = true;
+              package = null;
+              settings.binPath = "./node_modules/.bin/oxlint";
+            };
+
+            # `oxlint --type-aware` needs its own config/rule set (see
+            # .oxlintrc.typecheck.json) and can't share the `oxlint` hook.
+            oxlint-typecheck = {
+              enable = true;
+              name = "oxlint (type-aware)";
+              description = "Type-aware oxlint pass against .oxlintrc.typecheck.json.";
+              entry = "./node_modules/.bin/oxlint --type-aware -c .oxlintrc.typecheck.json .";
+              files = "\\.tsx?$";
+              pass_filenames = false;
+            };
+
+            tsc = {
+              enable = true;
+              name = "tsc";
+              description = "TypeScript type-check (tsc --noEmit).";
+              entry = "./node_modules/.bin/tsc --noEmit";
+              files = "\\.tsx?$|tsconfig\\.json$";
+              pass_filenames = false;
+            };
+
+            # Mirrors `checks.phpstan` and composer.json's `phpstan` script,
+            # but runs against the working tree instead of a hermetic
+            # composerDeps rebuild, so it stays fast enough for a hook.
+            phpstan = {
+              enable = true;
+              package = pkgs.phpstan;
+              entry = "${pkgs.phpstan}/bin/phpstan analyse --memory-limit=2G";
+              pass_filenames = false;
+            };
+
+            nixfmt.enable = true;
+            statix.enable = true;
+            deadnix.enable = true;
+          };
+        };
+
         composerData = builtins.fromJSON (builtins.readFile ./composer.json);
 
         pname = "cloudflare-email";
-        version = composerData.version;
+        inherit (composerData) version;
         src = self;
 
         # -------------------------------------------------------------- #
@@ -134,7 +200,7 @@
           '';
 
           meta = {
-            description = composerData.description;
+            inherit (composerData) description;
             license = lib.licenses.mit;
             platforms = lib.platforms.all;
           };
@@ -142,14 +208,14 @@
       in
       {
         devShells.default = pkgs.mkShell {
-          packages = [
+          packages = pre-commit-check.enabledPackages ++ [
             php
             php.packages.composer
-            pkgs.phpstan
             nodejs
           ];
 
           shellHook = ''
+            ${pre-commit-check.shellHook}
             echo "PHP $(php --version | head -1)"
             echo "Composer $(composer --version)"
             echo "Node $(node --version)"
