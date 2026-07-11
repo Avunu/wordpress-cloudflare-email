@@ -1,0 +1,7 @@
+vendor
+node_modules
+build
+.devenv
+.direnv
+result*
+cloudflare-email.zip
