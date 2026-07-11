@@ -1,28 +1,37 @@
 {
-    "name": "cloudflare-email",
-    "version": "0.1.0",
-    "description": "Admin log viewer (DataViews) for the Cloudflare Email WordPress plugin.",
-    "license": "MIT",
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "build": "tsc --noEmit && rolldown -c rolldown.config.ts",
-        "dev": "rolldown -c rolldown.config.ts --watch",
-        "typecheck": "tsc --noEmit",
-        "upgrade": "npx npm-check-updates -u && npm install"
-    },
-    "dependencies": {
-        "@wordpress/dataviews": "^17.1.0"
-    },
-    "devDependencies": {
-        "@types/react": "^19.2.17",
-        "@types/react-dom": "^19.2.3",
-        "@wordpress/api-fetch": "^7.50.0",
-        "@wordpress/components": "^36.1.0",
-        "@wordpress/dom-ready": "^4.50.0",
-        "@wordpress/element": "^8.2.0",
-        "@wordpress/i18n": "^6.23.0",
-        "rolldown": "^1.1.5",
-        "typescript": "^7.0.2"
-    }
+  "name": "cloudflare-email",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Admin log viewer (DataViews) for the Cloudflare Email WordPress plugin.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "rolldown -c rolldown.config.ts",
+    "dev": "rolldown -c rolldown.config.ts --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint .",
+    "lint:fix": "oxlint --fix .",
+    "lint:typecheck": "oxlint --type-aware -c .oxlintrc.typecheck.json .",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "check": "npm run format:check && npm run lint && npm run lint:typecheck && npm run typecheck",
+    "upgrade": "npx npm-check-updates -u && npm install"
+  },
+  "dependencies": {
+    "@wordpress/dataviews": "^17.1.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@wordpress/api-fetch": "^7.50.0",
+    "@wordpress/components": "^36.1.0",
+    "@wordpress/dom-ready": "^4.50.0",
+    "@wordpress/element": "^8.2.0",
+    "@wordpress/i18n": "^6.23.0",
+    "oxfmt": "^0.58.0",
+    "oxlint": "^1.73.0",
+    "oxlint-tsgolint": "^0.24.0",
+    "rolldown": "^1.1.5",
+    "typescript": "^7.0.2"
+  }
 }

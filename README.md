@@ -64,16 +64,21 @@ The log viewer is a **TypeScript** DataViews app bundled with [rolldown](https:/
 ```bash
 direnv allow          # or: nix develop
 composer install      # PHP deps (plugin-update-checker)
-npm install           # JS deps (rolldown, typescript, @wordpress/dataviews)
+npm install           # JS deps (rolldown, typescript, oxlint, @wordpress/dataviews)
 npm run dev           # watch-build the DataViews app (rolldown --watch)
-npm run typecheck     # strict type-check (tsc --noEmit)
-npm run build         # type-check + production bundle -> build/
+npm run build         # production bundle -> build/
+npm run check         # oxfmt + oxlint + type-aware oxlint + tsc (the CI gate)
 ```
 
 `npm run build` emits `build/index.js` (IIFE), `build/index.asset.php` (the WordPress
 dependency manifest), and `build/index.css` (the DataViews stylesheet).
 `@wordpress/dataviews` and its non-core deps are bundled; every other `@wordpress/*`
 package resolves to its core `wp.*` global at runtime.
+
+Linting/formatting use the [OXC](https://oxc.rs/) toolchain — `oxlint` (all categories
+at error, plus a type-aware pass via `oxlint-tsgolint`) and `oxfmt`. `npm run check`
+runs the full gate; `npm run lint:fix` / `npm run format` apply autofixes. The same
+gate runs in CI on every push and pull request.
 
 Build the distributable, self-contained zip (bundles `vendor/` and the compiled `build/`):
 

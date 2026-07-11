@@ -7,7 +7,7 @@
  * Version:           0.1.0
  * x-release-please-end
  * Requires PHP:      8.4
- * Requires at least: 6.6
+ * Requires at least: 7.0
  * License:           MIT
  * Update URI:        https://github.com/Avunu/wordpress-cloudflare-email
  *

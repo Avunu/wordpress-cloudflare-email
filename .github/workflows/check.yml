@@ -1,0 +1,24 @@
+name: Check
+
+# Runs the OXC/TypeScript quality gate (oxfmt + oxlint + type-aware oxlint + tsc)
+# on every push and pull request. The release build (release.yml) is separate.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run check

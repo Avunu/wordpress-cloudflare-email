@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Type-aware lint pass (`npm run lint:typecheck`), kept separate from
+  // .oxlintrc.json: --type-aware activates every type-aware rule in enabled
+  // categories, so categories are all off here and we opt IN. rolldown.config.ts
+  // is excluded because it is outside the tsconfig program.
+  "categories": {
+    "correctness": "off",
+    "nursery": "off",
+    "pedantic": "off",
+    "perf": "off",
+    "restriction": "off",
+    "style": "off",
+    "suspicious": "off"
+  },
+  "ignorePatterns": ["build", "vendor", "node_modules", "**/*.map", "rolldown.config.ts"],
+  "plugins": ["typescript"],
+  "rules": {
+    "typescript/no-floating-promises": "error",
+    "typescript/await-thenable": "error",
+    // attributes:false — async JSX event handlers (onClick, …) are idiomatic React.
+    "typescript/no-misused-promises": ["error", { "checksVoidReturn": { "attributes": false } }],
+    "typescript/no-unsafe-assignment": "error",
+    "typescript/no-unsafe-call": "error",
+    "typescript/no-unsafe-member-access": "error",
+    "typescript/no-unsafe-argument": "error"
+  }
+}
