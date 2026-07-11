@@ -1,7 +1,10 @@
 name: Check
 
-# Runs the OXC/TypeScript quality gate (oxfmt + oxlint + type-aware oxlint + tsc)
-# on every push and pull request. The release build (release.yml) is separate.
+# Quality gates on every push and pull request (so Dependabot PRs are gated before
+# auto-merge). Two jobs:
+#   • check   — the OXC/TypeScript gate (oxfmt + oxlint + type-aware oxlint + tsc)
+#   • phpstan — PHP static analysis (level 8, WordPress-aware) via the flake's checks.phpstan
+# The release build (release.yml) is separate.
 on:
   push:
     branches:
@@ -22,3 +25,14 @@ jobs:
       - run: npm ci
 
       - run: npm run check
+
+  phpstan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: DeterminateSystems/nix-installer-action@main
+
+      # Self-contained, offline: composerDeps (WordPress/WP-CLI stubs + phpstan-wordpress)
+      # come from composer.lock; the phpstan binary from nixpkgs.
+      - run: nix build .#checks.x86_64-linux.phpstan -L
