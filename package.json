@@ -4,16 +4,25 @@
     "description": "Admin log viewer (DataViews) for the Cloudflare Email WordPress plugin.",
     "license": "MIT",
     "private": true,
+    "type": "module",
     "scripts": {
-        "build": "wp-scripts build",
-        "start": "wp-scripts start",
-        "lint:js": "wp-scripts lint-js",
+        "build": "tsc --noEmit && rolldown -c rolldown.config.ts",
+        "dev": "rolldown -c rolldown.config.ts --watch",
+        "typecheck": "tsc --noEmit",
         "upgrade": "npx npm-check-updates -u && npm install"
-    },
-    "devDependencies": {
-        "@wordpress/scripts": "^32.6.0"
     },
     "dependencies": {
         "@wordpress/dataviews": "^17.1.0"
+    },
+    "devDependencies": {
+        "@types/react": "^19.2.17",
+        "@types/react-dom": "^19.2.3",
+        "@wordpress/api-fetch": "^7.50.0",
+        "@wordpress/components": "^36.1.0",
+        "@wordpress/dom-ready": "^4.50.0",
+        "@wordpress/element": "^8.2.0",
+        "@wordpress/i18n": "^6.23.0",
+        "rolldown": "^1.1.5",
+        "typescript": "^7.0.2"
     }
 }

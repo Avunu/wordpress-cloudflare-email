@@ -58,6 +58,15 @@
 
           dontNpmInstall = true;
 
+          # rolldown ships a prebuilt native (.node) binding whose ELF
+          # dependencies (libstdc++/libgcc_s) must be patched onto the Nix store
+          # before it can be dlopened during the build.
+          nativeBuildInputs = [ pkgs.autoPatchelfHook ];
+          buildInputs = [ pkgs.stdenv.cc.cc.lib ];
+          preBuild = ''
+            autoPatchelf node_modules/@rolldown
+          '';
+
           installPhase = ''
             runHook preInstall
             mkdir -p "$out"

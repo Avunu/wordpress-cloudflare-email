@@ -59,14 +59,21 @@ Then open **Tools → Cloudflare Email** to see the log entry.
 
 ## Development
 
-The dev shell and build are driven by [Nix](https://nixos.org/) (with [direnv](https://direnv.net/)):
+The log viewer is a **TypeScript** DataViews app bundled with [rolldown](https://rolldown.rs/); the dev shell and release build are driven by [Nix](https://nixos.org/) (with [direnv](https://direnv.net/)):
 
 ```bash
 direnv allow          # or: nix develop
 composer install      # PHP deps (plugin-update-checker)
-npm install           # JS deps (@wordpress/scripts, @wordpress/dataviews)
-npm run start         # watch-build the DataViews app
+npm install           # JS deps (rolldown, typescript, @wordpress/dataviews)
+npm run dev           # watch-build the DataViews app (rolldown --watch)
+npm run typecheck     # strict type-check (tsc --noEmit)
+npm run build         # type-check + production bundle -> build/
 ```
+
+`npm run build` emits `build/index.js` (IIFE), `build/index.asset.php` (the WordPress
+dependency manifest), and `build/index.css` (the DataViews stylesheet).
+`@wordpress/dataviews` and its non-core deps are bundled; every other `@wordpress/*`
+package resolves to its core `wp.*` global at runtime.
 
 Build the distributable, self-contained zip (bundles `vendor/` and the compiled `build/`):
 

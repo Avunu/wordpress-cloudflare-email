@@ -1,21 +1,23 @@
 /**
  * Cloudflare Email — log viewer.
  *
- * A small DataViews app mounted on the Tools → Cloudflare Email screen. All data
- * comes from the cloudflare-email/v1 REST routes; @wordpress/dataviews is bundled
- * (see webpack.config.js), everything else is a core script handle.
+ * A DataViews app mounted on the Tools → Cloudflare Email screen. All data comes
+ * from the cloudflare-email/v1 REST routes. `@wordpress/dataviews` (and its
+ * non-core dependencies) are bundled; everything else resolves to a core
+ * `wp.*` / React global at runtime (see rolldown.config.ts).
  */
 import {
 	createRoot,
-	render,
 	useState,
 	useEffect,
 	useMemo,
 	useCallback,
 } from '@wordpress/element';
+import type { ReactNode } from 'react';
 import domReady from '@wordpress/dom-ready';
 import apiFetch from '@wordpress/api-fetch';
 import { DataViews } from '@wordpress/dataviews';
+import type { View, Field, Action } from '@wordpress/dataviews';
 import {
 	Button,
 	Spinner,
@@ -25,28 +27,82 @@ import {
 } from '@wordpress/components';
 import { __, sprintf } from '@wordpress/i18n';
 
-const config = window.cloudflareEmailLog || { root: '', nonce: '' };
+type Status = 'sent' | 'failed';
+
+interface LogItem {
+	id: number;
+	created_at: string;
+	status: Status;
+	from_email: string;
+	to: string[];
+	subject: string;
+	resent_count: number;
+}
+
+interface LogHeaders {
+	cc?: string[];
+	bcc?: string[];
+	reply_to?: string | null;
+	custom?: Record< string, string >;
+}
+
+interface LogAttachment {
+	name: string;
+	path: string;
+	type: string;
+	disposition: string;
+}
+
+interface LogDetail extends LogItem {
+	body_html: string | null;
+	body_text: string | null;
+	headers: LogHeaders;
+	attachments: LogAttachment[];
+	cf_result: unknown;
+	error: string | null;
+}
+
+interface LogListResponse {
+	logs: LogItem[];
+	total: number;
+	totalPages: number;
+}
+
+const config: { root: string; nonce: string } = window.cloudflareEmailLog ?? {
+	root: '',
+	nonce: '',
+};
 
 apiFetch.use( apiFetch.createNonceMiddleware( config.nonce ) );
 
-const api = ( path, options = {} ) =>
-	apiFetch( { url: `${ config.root }${ path }`, ...options } );
+interface ApiOptions {
+	method?: string;
+	data?: unknown;
+}
+
+function api< T >( path: string, options: ApiOptions = {} ): Promise< T > {
+	return apiFetch< T >( {
+		url: `${ config.root }${ path }`,
+		method: options.method,
+		data: options.data,
+	} );
+}
 
 const STATUS_ELEMENTS = [
 	{ value: 'sent', label: __( 'Sent', 'cloudflare-email' ) },
 	{ value: 'failed', label: __( 'Failed', 'cloudflare-email' ) },
 ];
 
-function formatDate( value ) {
+function formatDate( value: string ): string {
 	if ( ! value ) {
 		return '';
 	}
 	// Stored as site-local 'YYYY-MM-DD HH:MM:SS'.
 	const date = new Date( value.replace( ' ', 'T' ) );
-	return isNaN( date ) ? value : date.toLocaleString();
+	return Number.isNaN( date.getTime() ) ? value : date.toLocaleString();
 }
 
-function StatusBadge( { status } ) {
+function StatusBadge( { status }: { status: Status } ): ReactNode {
 	const failed = status === 'failed';
 	return (
 		<span
@@ -67,20 +123,33 @@ function StatusBadge( { status } ) {
 	);
 }
 
-function DetailRow( { label, children } ) {
+function DetailRow( {
+	label,
+	children,
+}: {
+	label: string;
+	children: ReactNode;
+} ): ReactNode {
 	if ( children === null || children === undefined || children === '' ) {
 		return null;
 	}
 	return (
-		<Flex align="flex-start" justify="flex-start" gap={ 4 } style={ { marginBottom: 8 } }>
-			<FlexItem style={ { minWidth: 90, fontWeight: 600 } }>{ label }</FlexItem>
+		<Flex
+			align="flex-start"
+			justify="flex-start"
+			gap={ 4 }
+			style={ { marginBottom: 8 } }
+		>
+			<FlexItem style={ { minWidth: 90, fontWeight: 600 } }>
+				{ label }
+			</FlexItem>
 			<FlexItem isBlock>{ children }</FlexItem>
 		</Flex>
 	);
 }
 
-function Detail( { log } ) {
-	const headers = log.headers || {};
+function Detail( { log }: { log: LogDetail } ): ReactNode {
+	const headers = log.headers ?? {};
 	return (
 		<div>
 			{ log.status === 'failed' && log.error && (
@@ -105,16 +174,16 @@ function Detail( { log } ) {
 				{ log.from_email }
 			</DetailRow>
 			<DetailRow label={ __( 'To', 'cloudflare-email' ) }>
-				{ ( log.to || [] ).join( ', ' ) }
+				{ ( log.to ?? [] ).join( ', ' ) }
 			</DetailRow>
-			{ !! ( headers.cc || [] ).length && (
+			{ !! ( headers.cc ?? [] ).length && (
 				<DetailRow label={ __( 'Cc', 'cloudflare-email' ) }>
-					{ headers.cc.join( ', ' ) }
+					{ ( headers.cc ?? [] ).join( ', ' ) }
 				</DetailRow>
 			) }
-			{ !! ( headers.bcc || [] ).length && (
+			{ !! ( headers.bcc ?? [] ).length && (
 				<DetailRow label={ __( 'Bcc', 'cloudflare-email' ) }>
-					{ headers.bcc.join( ', ' ) }
+					{ ( headers.bcc ?? [] ).join( ', ' ) }
 				</DetailRow>
 			) }
 			{ !! headers.reply_to && (
@@ -125,9 +194,11 @@ function Detail( { log } ) {
 			<DetailRow label={ __( 'Subject', 'cloudflare-email' ) }>
 				{ log.subject }
 			</DetailRow>
-			{ !! ( log.attachments || [] ).length && (
+			{ !! ( log.attachments ?? [] ).length && (
 				<DetailRow label={ __( 'Attachments', 'cloudflare-email' ) }>
-					{ log.attachments.map( ( a ) => a.name ).join( ', ' ) }
+					{ ( log.attachments ?? [] )
+						.map( ( a ) => a.name )
+						.join( ', ' ) }
 				</DetailRow>
 			) }
 			<div style={ { marginTop: 12 } }>
@@ -159,7 +230,7 @@ function Detail( { log } ) {
 							overflow: 'auto',
 						} }
 					>
-						{ log.body_text || '' }
+						{ log.body_text ?? '' }
 					</pre>
 				) }
 			</div>
@@ -168,11 +239,11 @@ function Detail( { log } ) {
 }
 
 // Rendered inside the Modal that DataViews provides for a RenderModal action.
-function DetailView( { id } ) {
-	const [ log, setLog ] = useState( null );
+function DetailView( { id }: { id: number } ): ReactNode {
+	const [ log, setLog ] = useState< LogDetail | null >( null );
 	useEffect( () => {
 		let cancelled = false;
-		api( `/logs/${ id }` ).then( ( res ) => {
+		api< LogDetail >( `/logs/${ id }` ).then( ( res ) => {
 			if ( ! cancelled ) {
 				setLog( res );
 			}
@@ -186,7 +257,15 @@ function DetailView( { id } ) {
 }
 
 // Rendered inside the Modal that DataViews provides for a RenderModal action.
-function DeleteConfirm( { items, closeModal, onDone } ) {
+function DeleteConfirm( {
+	items,
+	closeModal,
+	onDone,
+}: {
+	items: LogItem[];
+	closeModal?: () => void;
+	onDone: () => void;
+} ): ReactNode {
 	const [ busy, setBusy ] = useState( false );
 	const many = items.length > 1;
 
@@ -199,10 +278,10 @@ function DeleteConfirm( { items, closeModal, onDone } ) {
 					data: { ids: items.map( ( i ) => i.id ) },
 				} );
 			} else {
-				await api( `/logs/${ items[ 0 ].id }`, { method: 'DELETE' } );
+				await api( `/logs/${ items[ 0 ]?.id }`, { method: 'DELETE' } );
 			}
 			onDone();
-			closeModal();
+			closeModal?.();
 		} finally {
 			setBusy( false );
 		}
@@ -214,16 +293,31 @@ function DeleteConfirm( { items, closeModal, onDone } ) {
 				{ many
 					? sprintf(
 							/* translators: %d: number of entries */
-							__( 'Delete %d log entries? This cannot be undone.', 'cloudflare-email' ),
+							__(
+								'Delete %d log entries? This cannot be undone.',
+								'cloudflare-email'
+							),
 							items.length
 					  )
-					: __( 'Delete this log entry? This cannot be undone.', 'cloudflare-email' ) }
+					: __(
+							'Delete this log entry? This cannot be undone.',
+							'cloudflare-email'
+					  ) }
 			</p>
 			<Flex justify="flex-end" gap={ 3 } style={ { marginTop: 16 } }>
-				<Button variant="tertiary" onClick={ closeModal } disabled={ busy }>
+				<Button
+					variant="tertiary"
+					onClick={ closeModal }
+					disabled={ busy }
+				>
 					{ __( 'Cancel', 'cloudflare-email' ) }
 				</Button>
-				<Button variant="primary" isDestructive onClick={ doDelete } isBusy={ busy }>
+				<Button
+					variant="primary"
+					isDestructive
+					onClick={ doDelete }
+					isBusy={ busy }
+				>
 					{ __( 'Delete', 'cloudflare-email' ) }
 				</Button>
 			</Flex>
@@ -231,7 +325,7 @@ function DeleteConfirm( { items, closeModal, onDone } ) {
 	);
 }
 
-const DEFAULT_VIEW = {
+const DEFAULT_VIEW: View = {
 	type: 'table',
 	page: 1,
 	perPage: 20,
@@ -242,16 +336,16 @@ const DEFAULT_VIEW = {
 	titleField: 'subject',
 };
 
-function App() {
-	const [ view, setView ] = useState( DEFAULT_VIEW );
-	const [ data, setData ] = useState( [] );
+function App(): ReactNode {
+	const [ view, setView ] = useState< View >( DEFAULT_VIEW );
+	const [ data, setData ] = useState< LogItem[] >( [] );
 	const [ paginationInfo, setPaginationInfo ] = useState( {
 		totalItems: 0,
 		totalPages: 0,
 	} );
 	const [ isLoading, setIsLoading ] = useState( true );
 	const [ refreshKey, setRefreshKey ] = useState( 0 );
-	const [ notice, setNotice ] = useState( null );
+	const [ notice, setNotice ] = useState< string | null >( null );
 
 	const refresh = useCallback( () => setRefreshKey( ( k ) => k + 1 ), [] );
 
@@ -259,45 +353,48 @@ function App() {
 		let cancelled = false;
 		setIsLoading( true );
 
-		const statusFilter = ( view.filters || [] ).find(
+		const statusFilter = ( view.filters ?? [] ).find(
 			( f ) => f.field === 'status'
 		);
+		const rawStatus = Array.isArray( statusFilter?.value )
+			? statusFilter?.value[ 0 ]
+			: statusFilter?.value;
+
 		const params = new URLSearchParams( {
-			page: String( view.page ),
-			per_page: String( view.perPage ),
+			page: String( view.page ?? 1 ),
+			per_page: String( view.perPage ?? 20 ),
 		} );
 		if ( view.search ) {
 			params.set( 'search', view.search );
 		}
-		if ( statusFilter && statusFilter.value ) {
-			const v = Array.isArray( statusFilter.value )
-				? statusFilter.value[ 0 ]
-				: statusFilter.value;
-			if ( v ) {
-				params.set( 'status', v );
-			}
+		if ( rawStatus ) {
+			params.set( 'status', String( rawStatus ) );
 		}
-		if ( view.sort && view.sort.field ) {
+		if ( view.sort?.field ) {
 			params.set( 'orderby', view.sort.field );
-			params.set( 'order', view.sort.direction || 'desc' );
+			params.set( 'order', view.sort.direction ?? 'desc' );
 		}
 
-		api( `/logs?${ params.toString() }` )
+		api< LogListResponse >( `/logs?${ params.toString() }` )
 			.then( ( res ) => {
 				if ( cancelled ) {
 					return;
 				}
-				setData( res.logs || [] );
+				setData( res.logs ?? [] );
 				setPaginationInfo( {
-					totalItems: res.total || 0,
-					totalPages: res.totalPages || 0,
+					totalItems: res.total ?? 0,
+					totalPages: res.totalPages ?? 0,
 				} );
 			} )
-			.catch( ( err ) => {
+			.catch( ( err: unknown ) => {
 				if ( ! cancelled ) {
 					setNotice(
-						err.message ||
-							__( 'Failed to load the email log.', 'cloudflare-email' )
+						err instanceof Error
+							? err.message
+							: __(
+									'Failed to load the email log.',
+									'cloudflare-email'
+							  )
 					);
 				}
 			} )
@@ -312,7 +409,7 @@ function App() {
 		};
 	}, [ view, refreshKey ] );
 
-	const fields = useMemo(
+	const fields = useMemo< Field< LogItem >[] >(
 		() => [
 			{
 				id: 'created_at',
@@ -338,7 +435,7 @@ function App() {
 				id: 'to',
 				label: __( 'To', 'cloudflare-email' ),
 				enableSorting: false,
-				render: ( { item } ) => ( item.to || [] ).join( ', ' ),
+				render: ( { item } ) => ( item.to ?? [] ).join( ', ' ),
 			},
 			{
 				id: 'subject',
@@ -349,7 +446,7 @@ function App() {
 		[]
 	);
 
-	const actions = useMemo(
+	const actions = useMemo< Action< LogItem >[] >(
 		() => [
 			{
 				id: 'view',
@@ -368,13 +465,12 @@ function App() {
 						await api( `/logs/${ items[ 0 ].id }/resend`, {
 							method: 'POST',
 						} );
+						setNotice( __( 'Email resent.', 'cloudflare-email' ) );
+					} catch ( err: unknown ) {
 						setNotice(
-							__( 'Email resent.', 'cloudflare-email' )
-						);
-					} catch ( err ) {
-						setNotice(
-							err.message ||
-								__( 'Resend failed.', 'cloudflare-email' )
+							err instanceof Error
+								? err.message
+								: __( 'Resend failed.', 'cloudflare-email' )
 						);
 					}
 					refresh();
@@ -400,7 +496,10 @@ function App() {
 
 	return (
 		<>
-			<h1 className="wp-heading-inline" style={ { marginBottom: 16 } }>
+			<h1
+				className="wp-heading-inline"
+				style={ { marginBottom: 16 } }
+			>
 				{ __( 'Cloudflare Email log', 'cloudflare-email' ) }
 			</h1>
 			{ notice && (
@@ -408,7 +507,7 @@ function App() {
 					{ notice }
 				</Notice>
 			) }
-			<DataViews
+			<DataViews< LogItem >
 				data={ data }
 				fields={ fields }
 				view={ view }
@@ -428,9 +527,5 @@ domReady( () => {
 	if ( ! el ) {
 		return;
 	}
-	if ( typeof createRoot === 'function' ) {
-		createRoot( el ).render( <App /> );
-	} else {
-		render( <App />, el );
-	}
+	createRoot( el ).render( <App /> );
 } );

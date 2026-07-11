@@ -1,0 +1,118 @@
+import { defineConfig, type Plugin } from 'rolldown';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
+
+/**
+ * Build config for the DataViews admin app.
+ *
+ * Output is a single IIFE (`build/index.js`) plus a WordPress dependency
+ * manifest (`build/index.asset.php`) and the DataViews stylesheet
+ * (`build/index.css`) — matching what Admin::enqueue() expects.
+ *
+ * Externalization strategy: every WordPress package that WordPress core
+ * registers as a script handle is externalized to its `wp.*` / React global;
+ * `@wordpress/dataviews` and its non-core dependencies (`@wordpress/ui`,
+ * `@ariakit/react`, clsx, …) are bundled, because core does not register them.
+ *
+ * JSX uses oxc's default automatic runtime (imports from `react/jsx-runtime`,
+ * which is externalized), so no explicit jsx option is needed.
+ */
+
+const require = createRequire( import.meta.url );
+
+// WordPress packages that core registers as script handles (window.wp.*).
+const CORE_WP_HANDLES = new Set( [
+	'a11y', 'annotations', 'api-fetch', 'autop', 'blob', 'block-editor',
+	'block-serialization-default-parser', 'blocks', 'commands', 'components',
+	'compose', 'core-data', 'data', 'data-controls', 'date', 'deprecated',
+	'dom', 'dom-ready', 'element', 'escape-html', 'hooks', 'html-entities',
+	'i18n', 'icons', 'is-shallow-equal', 'keyboard-shortcuts', 'keycodes',
+	'notices', 'plugins', 'preferences', 'primitives', 'priority-queue',
+	'private-apis', 'redux-routine', 'rich-text', 'shortcode', 'style-engine',
+	'token-list', 'url', 'viewport', 'warning', 'wordcount',
+] );
+
+const camelCase = ( name ) => name.replace( /-([a-z0-9])/g, ( _m, c ) => c.toUpperCase() );
+
+/** Map a module id to its WordPress script handle + browser global, or null to bundle it. */
+function externalInfo( id ) {
+	switch ( id ) {
+		case 'react':
+			return { handle: 'react', global: 'React' };
+		case 'react-dom':
+		case 'react-dom/client':
+			return { handle: 'react-dom', global: 'ReactDOM' };
+		case 'react/jsx-runtime':
+		case 'react/jsx-dev-runtime':
+			return { handle: 'react-jsx-runtime', global: 'ReactJSXRuntime' };
+	}
+	const match = /^@wordpress\/([a-z0-9-]+)$/.exec( id );
+	if ( match && CORE_WP_HANDLES.has( match[ 1 ] ) ) {
+		return { handle: `wp-${ match[ 1 ] }`, global: `wp.${ camelCase( match[ 1 ] ) }` };
+	}
+	return null;
+}
+
+// DataViews ships its compiled stylesheet separately; copy it into the bundle
+// (rolldown no longer bundles CSS imports).
+const dataviewsDir = dirname( require.resolve( '@wordpress/dataviews/package.json' ) );
+const dataviewsCss = readFileSync( join( dataviewsDir, 'build-style', 'style.css' ), 'utf8' );
+
+/**
+ * Emit `index.asset.php` (the dependency handles the bundle imports + a content
+ * hash) and `index.css` (the DataViews stylesheet). Mirrors @wordpress/scripts'
+ * output so the PHP side (Admin::enqueue) is unchanged.
+ */
+function wpAssets() {
+	return {
+		name: 'wp-assets',
+		generateBundle( _options, bundle ) {
+			const handles = new Set();
+			let entryCode = '';
+			for ( const file of Object.values( bundle ) ) {
+				if ( file.type !== 'chunk' ) {
+					continue;
+				}
+				if ( file.isEntry ) {
+					entryCode = file.code;
+				}
+				for ( const imported of file.imports ) {
+					const info = externalInfo( imported );
+					if ( info ) {
+						handles.add( info.handle );
+					}
+				}
+			}
+			const deps = [ ...handles ].sort();
+			const version = createHash( 'sha256' ).update( entryCode ).digest( 'hex' ).slice( 0, 20 );
+			const php =
+				`<?php return array('dependencies' => array(${ deps
+					.map( ( d ) => `'${ d }'` )
+					.join( ', ' ) }), 'version' => '${ version }');\n`;
+
+			this.emitFile( { type: 'asset', fileName: 'index.asset.php', source: php } );
+			this.emitFile( { type: 'asset', fileName: 'index.css', source: dataviewsCss } );
+		},
+	} satisfies Plugin;
+}
+
+export default defineConfig( {
+	input: 'assets/src/index.tsx',
+	platform: 'browser',
+	transform: {
+		define: {
+			'process.env.NODE_ENV': JSON.stringify( 'production' ),
+		},
+	},
+	external: ( id ) => externalInfo( id ) !== null,
+	plugins: [ wpAssets() ],
+	output: {
+		dir: 'build',
+		format: 'iife',
+		entryFileNames: 'index.js',
+		minify: true,
+		globals: ( id ) => externalInfo( id )?.global ?? id,
+	},
+} );
