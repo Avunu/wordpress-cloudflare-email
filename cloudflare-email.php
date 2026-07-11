@@ -4,7 +4,7 @@
  * Plugin Name:       Cloudflare Email
  * Description:       Send all WordPress email through the Cloudflare Email Sending API and log every message. Configure via wp-config.php — no admin settings.
  * x-release-please-start-version
- * Version:           0.1.0
+ * Version:           0.1.1
  * x-release-please-end
  * Requires PHP:      8.4
  * Requires at least: 7.0
