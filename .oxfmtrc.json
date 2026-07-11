@@ -1,15 +1,16 @@
 {
 	"$schema": "./node_modules/oxfmt/configuration_schema.json",
 	"ignorePatterns": [
+		".release-please-manifest.json",
 		"build",
-		"vendor",
-		"node_modules",
-		"package-lock.json",
+		"CHANGELOG.md",
 		"composer.json",
 		"composer.lock",
+		"node_modules",
+		"package-lock.json",
 		"release-please-config.json",
-		".release-please-manifest.json"
+		"vendor"
 	],
-	"useTabs": true,
-	"jsdoc": true
+	"jsdoc": true,
+	"useTabs": true
 }
