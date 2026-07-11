@@ -1,14 +1,36 @@
 version: 2
+
+# Keeps every ecosystem in this repo up to date. Updates land on `main` automatically
+# (see .github/workflows/dependabot-auto-merge.yml); release-please remains the gate for
+# actually cutting a release. Dep bumps use the `chore` type so they never force a release
+# on their own — they ride along with the next real release.
 updates:
-  - package-ecosystem: "github-actions"
-    directory: "/"
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "daily" # or weekly/monthly
-  - package-ecosystem: "composer"
-    directory: "/"
+      interval: daily
+    commit-message:
+      prefix: chore
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  - package-ecosystem: composer
+    directory: /
     schedule:
-      interval: "daily" # or weekly/monthly
-  - package-ecosystem: "npm"
-    directory: "/"
+      interval: daily
+    commit-message:
+      prefix: chore
+    groups:
+      composer:
+        patterns: ["*"]
+
+  - package-ecosystem: npm
+    directory: /
     schedule:
-      interval: "daily" # or weekly/monthly
+      interval: daily
+    commit-message:
+      prefix: chore
+    groups:
+      npm:
+        patterns: ["*"]
