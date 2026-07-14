@@ -22,20 +22,19 @@ export async function bootPlayground({ wp = process.env.WP_VERSION ?? "latest", 
 	if (!existsSync(resolve(REPO_ROOT, "build/index.js"))) {
 		throw new Error("build/index.js is missing — run `npm run build` in the repo root first.");
 	}
-	const server = await runCLI({
+	// The plugin's entrypoint returns early (no PSR-4 autoloader → no classes, no hooks) when
+	// vendor/autoload.php is absent, which reads downstream as a confusing "Class not found" /
+	// plugin-inactive cascade. Fail fast with the real cause instead.
+	if (!existsSync(resolve(REPO_ROOT, "vendor/autoload.php"))) {
+		throw new Error("vendor/autoload.php is missing — run `composer install` in the repo root first.");
+	}
+	return runCLI({
 		command: "server",
 		php: "8.4",
 		wp,
 		port,
 		login: true,
 		quiet: true,
-		// Single worker on purpose. The CLI shares /wordpress (and thus the SQLite DB)
-		// across a worker pool, but our plugin/mu-plugin mounts live *nested under*
-		// /wordpress and don't reliably propagate to every pooled worker — so round-robined
-		// run()/HTTP calls could land on a worker where the plugin isn't mounted (plugin never
-		// loads → "Class not found", no table). One worker = one filesystem + DB shared by the
-		// blueprint, every run(), and the HTTP server. Deterministic; fast enough for tests.
-		workers: 1,
 		mount: [
 			{ hostPath: REPO_ROOT, vfsPath: "/wordpress/wp-content/plugins/cloudflare-email" },
 			{ hostPath: resolve(HARNESS_DIR, "mu-plugins"), vfsPath: "/wordpress/wp-content/mu-plugins" },
@@ -44,40 +43,6 @@ export async function bootPlayground({ wp = process.env.WP_VERSION ?? "latest", 
 			steps: [{ step: "activatePlugin", pluginPath: PLUGIN_PATH }],
 		},
 	});
-
-	// The boot-time blueprint step above activates the plugin, but under resource-constrained
-	// CI runners we observed it not reliably visible to server.playground.run() calls (every
-	// check would silently run against a plugin-INACTIVE site — "Ready!" printed with no error,
-	// yet the class autoloader was never registered) despite passing consistently in local dev.
-	// Explicitly (re)activate here, against the exact instance this harness talks to, so every
-	// caller gets a guaranteed-active plugin. Idempotent: activate_plugin() is a no-op query
-	// away if is_plugin_active() already says yes.
-	let activation;
-	try {
-		activation = await phpJson(
-			server,
-			`if (!function_exists('is_plugin_active')) {
-				require_once ABSPATH . 'wp-admin/includes/plugin.php';
-			}
-			$path = ${JSON.stringify(PLUGIN_PATH)};
-			if (!is_plugin_active($path)) {
-				$result = activate_plugin($path);
-				if (is_wp_error($result)) {
-					return ['ok' => false, 'error' => $result->get_error_message()];
-				}
-			}
-			return ['ok' => is_plugin_active($path)];`,
-		);
-	} catch (err) {
-		await server[Symbol.asyncDispose]();
-		throw new Error(`cloudflare-email plugin activation check crashed: ${err.message}`);
-	}
-	if (!activation.ok) {
-		await server[Symbol.asyncDispose]();
-		throw new Error(`cloudflare-email plugin failed to activate: ${activation.error ?? "unknown reason"}`);
-	}
-
-	return server;
 }
 
 const MARK = "@@CFE@@";

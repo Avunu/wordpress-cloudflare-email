@@ -14,6 +14,9 @@ This is a **separate npm package** from the repo root on purpose: its dependenci
 
 - The plugin must be **built first**: run `npm run build` in the repo root (the tests mount and
   run the real `build/` output).
+- Composer deps must be installed: run `composer install` in the repo root. The plugin's
+  entrypoint bails out (no autoloader → no classes) without `vendor/autoload.php`, so the tests
+  fail fast if it is missing.
 - Node 22+.
 - `npm install` in this directory.
 - For the browser test only: a Chrome/Chromium binary. Defaults to

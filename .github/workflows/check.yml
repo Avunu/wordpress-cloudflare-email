@@ -53,6 +53,16 @@ jobs:
             package-lock.json
             tests/playground/package-lock.json
 
+      # The plugin's entrypoint bails out early (no classes autoload) if
+      # vendor/autoload.php is missing, so the mounted plugin must have its Composer
+      # deps installed — exactly as the shipped release zip does. PHP 8.4 matches the
+      # plugin's "Requires PHP" so the platform check passes.
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer
+      - run: composer install --no-dev --no-interaction --optimize-autoloader
+
       # Build the real plugin bundle the tests mount, then install the isolated
       # test harness (its heavy deps live outside the root/Nix lockfile).
       - run: npm ci
