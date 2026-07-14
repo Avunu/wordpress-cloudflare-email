@@ -61,16 +61,25 @@
         pre-commit-check = git-hooks.lib.${system}.run {
           src = self;
           hooks = {
+            # `excludes` mirrors the "tests" ignorePatterns entry in .oxfmtrc.json /
+            # .oxlintrc.json: tests/playground is a separate npm package (own lint/format
+            # setup, not part of this tsconfig). Without this, git-hooks.nix's built-in
+            # oxfmt/oxlint hooks (matched via `types_or`, no files filter) still hand a
+            # staged tests/*.mjs file to the tool; the tool's own ignorePatterns then
+            # filters it back out, leaving zero targets — which both tools treat as a hard
+            # failure ("Expected at least one target file") rather than a no-op.
             oxfmt = {
               enable = true;
               package = null;
               settings.binPath = "./node_modules/.bin/oxfmt";
+              excludes = [ "^tests/" ];
             };
 
             oxlint = {
               enable = true;
               package = null;
               settings.binPath = "./node_modules/.bin/oxlint";
+              excludes = [ "^tests/" ];
             };
 
             # `oxlint --type-aware` needs its own config/rule set (see

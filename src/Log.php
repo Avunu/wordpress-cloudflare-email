@@ -14,6 +14,16 @@ final class Log
     public const CRON_HOOK = 'cloudflare_email_prune';
 
     /**
+     * Bump when the install() schema changes. maybeUpgrade() compares this against the
+     * stored option and re-runs dbDelta when they differ, so the table exists even on
+     * installs where the activation hook never fired for this database — an in-place
+     * self-update, a must-use plugin, or a database imported from another environment.
+     */
+    public const DB_VERSION = 1;
+
+    private const VERSION_OPTION = 'cloudflare_email_db_version';
+
+    /**
      * Set to a log id while a resend is in flight, so record() updates that row
      * instead of inserting a duplicate.
      */
@@ -57,6 +67,23 @@ final class Log
         ) $charset;";
 
         dbDelta($sql);
+
+        update_option(self::VERSION_OPTION, self::DB_VERSION);
+    }
+
+    /**
+     * Ensure the log table matches DB_VERSION, creating/upgrading it if not. Cheap enough
+     * for the request hot path — a single autoloaded option read — and only touches the
+     * database (dbDelta) when the stored version differs. Called on every load so the table
+     * self-heals regardless of how the plugin reached this site.
+     */
+    public static function maybeUpgrade(): void
+    {
+        if ((int) get_option(self::VERSION_OPTION, 0) === self::DB_VERSION) {
+            return;
+        }
+
+        self::install();
     }
 
     /**

@@ -11,6 +11,10 @@ final class Plugin
 {
     public static function init(): void
     {
+        // Self-heal the log table if the activation hook never ran for this database
+        // (in-place self-update, must-use plugin, or an imported database).
+        Log::maybeUpgrade();
+
         // The log UI + REST API are available whenever the plugin is active, so an
         // admin can review past sends even after credentials are removed.
         add_action('rest_api_init', [Rest::class, 'register']);

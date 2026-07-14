@@ -12,7 +12,7 @@
 		"style": "error",
 		"suspicious": "error"
 	},
-	"ignorePatterns": ["build", "vendor", "node_modules", "**/*.map", "**/*.d.ts"],
+	"ignorePatterns": ["build", "vendor", "node_modules", "tests", "**/*.map", "**/*.d.ts"],
 	"overrides": [
 		{
 			// The rolldown config is a Node build script; node: imports are the point,

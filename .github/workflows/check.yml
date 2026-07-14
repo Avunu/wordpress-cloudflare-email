@@ -1,9 +1,12 @@
 name: Check
 
 # Quality gates on every push and pull request (so Dependabot PRs are gated before
-# auto-merge). Two jobs:
+# auto-merge). Jobs:
 #   • check   — the OXC/TypeScript gate (oxfmt + oxlint + type-aware oxlint + tsc)
 #   • phpstan — PHP static analysis (level 8, WordPress-aware) via the flake's checks.phpstan
+#   • tests   — builds the JS bundle and runs the wp-playground runtime tests (asset
+#               manifest, backend logging + self-heal, and a headless-browser render smoke).
+#               This is what catches the silent failures static analysis cannot.
 # The release build (release.yml) is separate.
 on:
   push:
@@ -36,3 +39,34 @@ jobs:
       # Self-contained, offline: composerDeps (WordPress/WP-CLI stubs + phpstan-wordpress)
       # come from composer.lock; the phpstan binary from nixpkgs.
       - run: nix build .#checks.x86_64-linux.phpstan -L
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tests/playground/package-lock.json
+
+      # Build the real plugin bundle the tests mount, then install the isolated
+      # test harness (its heavy deps live outside the root/Nix lockfile).
+      - run: npm ci
+      - run: npm run build
+      - run: npm --prefix tests/playground ci
+
+      # A — the asset manifest (would have caught the wp-icons blank-page bug).
+      - run: npm run test:assets
+      # B — backend logging path + self-healing migration (wp-playground, no browser).
+      - run: npm run test:e2e
+
+      # C — the headless-browser render smoke that reproduces the blank page itself.
+      - uses: browser-actions/setup-chrome@v1
+        id: setup-chrome
+      - run: npm run test:browser
+        env:
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}

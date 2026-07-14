@@ -48,7 +48,12 @@ const CORE_WP_HANDLES = new Set([
 	"hooks",
 	"html-entities",
 	"i18n",
-	"icons",
+	// NOTE: `@wordpress/icons` is intentionally absent. Unlike the handles here, core
+	// does NOT register a `wp-icons` script — it is a bundled-only library. Listing it
+	// would emit `wp-icons` into index.asset.php as a dependency; WordPress then finds
+	// that handle unregistered and *silently drops the whole enqueued script*
+	// (WP_Dependencies::all_deps fails) — the log page renders completely blank with no
+	// console error. So `@wordpress/icons` must be bundled, not externalized.
 	"is-shallow-equal",
 	"keyboard-shortcuts",
 	"keycodes",
@@ -136,6 +141,22 @@ function wpAssets() {
 	} satisfies Plugin;
 }
 
+/**
+ * Some bundled transitive dependencies (notably `use-sync-external-store`, pulled in via
+ * `@wordpress/dataviews`) ship only CommonJS and call `require("react")`. rolldown leaves those
+ * `require()` calls untouched in the IIFE output, where `require` is undefined — so the bundle
+ * throws `ReferenceError: require is not defined` on load and the page renders blank. Define a tiny
+ * IIFE-scoped `require` that resolves the externalized React modules to the globals WordPress
+ * already provides. Unknown ids throw a descriptive error rather than the opaque built-in one, so
+ * the e2e/browser test surfaces any new CJS require.
+ */
+const REQUIRE_SHIM =
+	`var require=function(id){switch(id){` +
+	`case"react":return globalThis.React;` +
+	`case"react-dom":case"react-dom/client":return globalThis.ReactDOM;` +
+	`case"react/jsx-runtime":case"react/jsx-dev-runtime":return globalThis.ReactJSXRuntime;` +
+	`default:throw new Error("cloudflare-email: unshimmed require("+JSON.stringify(id)+")")}};`;
+
 export default defineConfig({
 	input: "assets/src/index.tsx",
 	platform: "browser",
@@ -151,6 +172,8 @@ export default defineConfig({
 		format: "iife",
 		entryFileNames: "index.js",
 		minify: true,
+		// Placed inside the IIFE wrapper (not the global scope), so `require` stays local.
+		intro: REQUIRE_SHIM,
 		globals: (id) => externalInfo(id)?.global ?? id,
 	},
 });

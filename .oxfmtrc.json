@@ -9,6 +9,7 @@
 		"node_modules",
 		"package-lock.json",
 		"release-please-config.json",
+		"tests",
 		"vendor"
 	],
 	"jsdoc": true,

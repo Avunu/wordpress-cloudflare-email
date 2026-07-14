@@ -15,6 +15,10 @@
 		"format": "oxfmt .",
 		"format:check": "oxfmt --check .",
 		"check": "npm run format:check && npm run lint && npm run lint:typecheck && npm run typecheck",
+		"test:assets": "node tests/playground/run-assets.mjs",
+		"test:e2e": "node tests/playground/run-e2e.mjs",
+		"test:browser": "node tests/playground/run-browser.mjs",
+		"test": "npm run test:assets && npm run test:e2e",
 		"upgrade": "npx npm-check-updates -u && npm install"
 	},
 	"dependencies": {
