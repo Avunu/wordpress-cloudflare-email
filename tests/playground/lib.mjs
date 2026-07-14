@@ -29,6 +29,13 @@ export async function bootPlayground({ wp = process.env.WP_VERSION ?? "latest", 
 		port,
 		login: true,
 		quiet: true,
+		// Single worker on purpose. The CLI shares /wordpress (and thus the SQLite DB)
+		// across a worker pool, but our plugin/mu-plugin mounts live *nested under*
+		// /wordpress and don't reliably propagate to every pooled worker — so round-robined
+		// run()/HTTP calls could land on a worker where the plugin isn't mounted (plugin never
+		// loads → "Class not found", no table). One worker = one filesystem + DB shared by the
+		// blueprint, every run(), and the HTTP server. Deterministic; fast enough for tests.
+		workers: 1,
 		mount: [
 			{ hostPath: REPO_ROOT, vfsPath: "/wordpress/wp-content/plugins/cloudflare-email" },
 			{ hostPath: resolve(HARNESS_DIR, "mu-plugins"), vfsPath: "/wordpress/wp-content/mu-plugins" },
