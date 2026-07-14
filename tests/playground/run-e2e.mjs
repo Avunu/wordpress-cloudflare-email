@@ -16,8 +16,10 @@ const EXISTS = `
 const t = tally();
 console.log(`Test B — backend logging e2e (WordPress ${process.env.WP_VERSION ?? "latest"})\n`);
 
-const server = await bootPlayground({ port: 9420 });
+let server;
 try {
+	server = await bootPlayground({ port: 9420 });
+
 	// 1. Activation created the table and stamped the schema version.
 	let r = await phpJson(
 		server,
@@ -98,8 +100,11 @@ try {
 		/notice-error/.test(r.html) && /assets are missing/.test(r.html),
 		r.html.replace(/\\s+/g, " ").slice(0, 70),
 	);
+} catch (err) {
+	console.error(`\nUnexpected error: ${err.message}`);
+	t.check("test completed without an unexpected error", false, err.message);
 } finally {
-	await server[Symbol.asyncDispose]();
+	if (server) await server[Symbol.asyncDispose]();
 }
 
 console.log(t.failures ? `\nTest B FAILED (${t.failures})` : "\nTest B PASSED");

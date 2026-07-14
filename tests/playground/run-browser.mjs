@@ -19,11 +19,13 @@ const LOG_PAGE = "/wp-admin/tools.php?page=cloudflare-email-log";
 const t = tally();
 console.log(`Test C — browser smoke (WordPress ${process.env.WP_VERSION ?? "latest"})\n`);
 
-const server = await bootPlayground({ port: 9430 });
-const url = server.serverUrl;
-const browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
-
+let server;
+let browser;
 try {
+	server = await bootPlayground({ port: 9430 });
+	const url = server.serverUrl;
+	browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
+
 	const page = await browser.newPage();
 	const pageErrors = [];
 	const consoleErrors = [];
@@ -60,9 +62,12 @@ try {
 	t.check("the log heading rendered", heading > 0);
 	t.check("the DataViews app mounted", dataviews > 0);
 	t.check("the sent email appears as a row", rowVisible > 0);
+} catch (err) {
+	console.error(`\nUnexpected error: ${err.message}`);
+	t.check("test completed without an unexpected error", false, err.message);
 } finally {
-	await browser.close();
-	await server[Symbol.asyncDispose]();
+	if (browser) await browser.close();
+	if (server) await server[Symbol.asyncDispose]();
 }
 
 console.log(t.failures ? `\nTest C FAILED (${t.failures})` : "\nTest C PASSED");

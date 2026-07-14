@@ -22,7 +22,7 @@ export async function bootPlayground({ wp = process.env.WP_VERSION ?? "latest", 
 	if (!existsSync(resolve(REPO_ROOT, "build/index.js"))) {
 		throw new Error("build/index.js is missing — run `npm run build` in the repo root first.");
 	}
-	return runCLI({
+	const server = await runCLI({
 		command: "server",
 		php: "8.4",
 		wp,
@@ -37,6 +37,40 @@ export async function bootPlayground({ wp = process.env.WP_VERSION ?? "latest", 
 			steps: [{ step: "activatePlugin", pluginPath: PLUGIN_PATH }],
 		},
 	});
+
+	// The boot-time blueprint step above activates the plugin, but under resource-constrained
+	// CI runners we observed it not reliably visible to server.playground.run() calls (every
+	// check would silently run against a plugin-INACTIVE site — "Ready!" printed with no error,
+	// yet the class autoloader was never registered) despite passing consistently in local dev.
+	// Explicitly (re)activate here, against the exact instance this harness talks to, so every
+	// caller gets a guaranteed-active plugin. Idempotent: activate_plugin() is a no-op query
+	// away if is_plugin_active() already says yes.
+	let activation;
+	try {
+		activation = await phpJson(
+			server,
+			`if (!function_exists('is_plugin_active')) {
+				require_once ABSPATH . 'wp-admin/includes/plugin.php';
+			}
+			$path = ${JSON.stringify(PLUGIN_PATH)};
+			if (!is_plugin_active($path)) {
+				$result = activate_plugin($path);
+				if (is_wp_error($result)) {
+					return ['ok' => false, 'error' => $result->get_error_message()];
+				}
+			}
+			return ['ok' => is_plugin_active($path)];`,
+		);
+	} catch (err) {
+		await server[Symbol.asyncDispose]();
+		throw new Error(`cloudflare-email plugin activation check crashed: ${err.message}`);
+	}
+	if (!activation.ok) {
+		await server[Symbol.asyncDispose]();
+		throw new Error(`cloudflare-email plugin failed to activate: ${activation.error ?? "unknown reason"}`);
+	}
+
+	return server;
 }
 
 const MARK = "@@CFE@@";
@@ -57,7 +91,18 @@ $__data = (function () {
 })();
 ob_end_clean();
 echo ${JSON.stringify(MARK)} . wp_json_encode($__data) . ${JSON.stringify(MARK)};`;
-	const res = await server.playground.run({ code });
+	let res;
+	try {
+		res = await server.playground.run({ code });
+	} catch (err) {
+		// PHP fatals surface as a thrown PHPExecutionFailureError whose default
+		// stringification dumps the entire response body as a byte-indexed object —
+		// unreadable in CI logs. Extract just the "Fatal error: ..." line WordPress
+		// prints instead.
+		const raw = String(err?.message ?? err);
+		const fatal = /<b>Fatal error<\/b>:\s*(.*?)(?:<br|\s+in\s+<b>)/is.exec(raw) ?? /Fatal error:\s*(.*)/i.exec(raw);
+		throw new Error(fatal ? `PHP fatal error: ${fatal[1].trim()}` : `PHP execution failed: ${raw.slice(0, 300)}`);
+	}
 	const text = res.text ?? "";
 	const start = text.indexOf(MARK);
 	const end = text.lastIndexOf(MARK);
