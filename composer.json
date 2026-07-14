@@ -2,7 +2,7 @@
   "name": "wordpress/cloudflare-email",
   "description": "Send all WordPress email through the Cloudflare Email Sending API, with a log of every message. Configure via wp-config.php — no admin settings.",
   "type": "wordpress-plugin",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "MIT",
   "require": {
     "php": ">=8.4",

@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.2](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.1.1...v0.1.2) (2026-07-14)
+
+
+### Bug Fixes
+
+* log viewer script loading + tests ([6fb4425](https://github.com/Avunu/wordpress-cloudflare-email/commit/6fb4425b2d9ed57d765bb7d4459274fb484a96eb))
+
+
+### Miscellaneous Chores
+
+* auto-merge dependabot PRs ([b5b72b9](https://github.com/Avunu/wordpress-cloudflare-email/commit/b5b72b99a0a6311b4b0a39b44a7ed3510c62fde0))
+* bump the github-actions group with 2 updates ([#3](https://github.com/Avunu/wordpress-cloudflare-email/issues/3)) ([8c4a100](https://github.com/Avunu/wordpress-cloudflare-email/commit/8c4a100e6604fc545cf0bc32e8fce186fd003a25))
+* phpstan check in ci ([75c4d89](https://github.com/Avunu/wordpress-cloudflare-email/commit/75c4d89c7faecb4e59309f1d829007550a210178))
+* update deps ([983d039](https://github.com/Avunu/wordpress-cloudflare-email/commit/983d039ad270cabf6c262cf518acf42803ef8b0c))
+
 ## [0.1.1](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.1.0...v0.1.1) (2026-07-11)
 
 
