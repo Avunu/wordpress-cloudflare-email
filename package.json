@@ -33,10 +33,10 @@
 		"@wordpress/dom-ready": "^4.50.0",
 		"@wordpress/element": "^8.2.0",
 		"@wordpress/i18n": "^6.23.0",
-		"oxfmt": "^0.61.0",
-		"oxlint": "^1.76.0",
+		"oxfmt": "^0.62.0",
+		"oxlint": "^1.77.0",
 		"oxlint-tsgolint": "^7.0.2001",
-		"rolldown": "^1.2.1",
+		"rolldown": "^1.2.2",
 		"typescript": "^7.0.2"
 	}
 }
