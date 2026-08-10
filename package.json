@@ -8,7 +8,7 @@
 	"scripts": {
 		"build": "rolldown -c rolldown.config.ts",
 		"dev": "rolldown -c rolldown.config.ts --watch",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.node.json",
 		"lint": "oxlint .",
 		"lint:fix": "oxlint --fix .",
 		"lint:typecheck": "oxlint --type-aware -c .oxlintrc.typecheck.json .",
