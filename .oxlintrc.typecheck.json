@@ -3,7 +3,8 @@
 	// Type-aware lint pass (`npm run lint:typecheck`), kept separate from
 	// .oxlintrc.json: --type-aware activates every type-aware rule in enabled
 	// categories, so categories are all off here and we opt IN. rolldown.config.ts
-	// is excluded because it is outside the tsconfig program.
+	// is covered too: tsconfig.json references tsconfig.node.json, which puts it in
+	// a program the type-aware pass can resolve.
 	"categories": {
 		"correctness": "off",
 		"nursery": "off",
@@ -13,7 +14,7 @@
 		"style": "off",
 		"suspicious": "off"
 	},
-	"ignorePatterns": ["build", "vendor", "node_modules", "tests", "**/*.map", "rolldown.config.ts"],
+	"ignorePatterns": ["build", "vendor", "node_modules", "tests", "**/*.map"],
 	"plugins": ["typescript"],
 	"rules": {
 		"typescript/no-floating-promises": "error",

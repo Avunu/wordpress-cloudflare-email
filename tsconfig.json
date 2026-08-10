@@ -18,5 +18,7 @@
 		"types": [],
 		"noEmit": true
 	},
-	"include": ["assets/src", "types"]
+	"include": ["assets/src", "types"],
+	// Points the editor / type-aware lint at the Node-side program (see tsconfig.node.json).
+	"references": [{ "path": "./tsconfig.node.json" }]
 }

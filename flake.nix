@@ -102,6 +102,19 @@
               pass_filenames = false;
             };
 
+            # Second program: rolldown.config.ts is Node-side (node: builtins, ES2023)
+            # and lives in tsconfig.node.json, not the root browser program — so the
+            # `tsc` hook above never sees it. pre-commit execs `entry` without a shell,
+            # so the two passes can't be `&&`-chained into one hook.
+            tsc-node = {
+              enable = true;
+              name = "tsc (node config)";
+              description = "TypeScript type-check of the Node build config.";
+              entry = "./node_modules/.bin/tsc --noEmit -p tsconfig.node.json";
+              files = "^rolldown\\.config\\.ts$|^tsconfig(\\.node)?\\.json$";
+              pass_filenames = false;
+            };
+
             # Mirrors `checks.phpstan` and composer.json's `phpstan` script,
             # but runs against the working tree instead of a hermetic
             # composerDeps rebuild, so it stays fast enough for a hook.

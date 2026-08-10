@@ -74,10 +74,20 @@ const CORE_WP_HANDLES = new Set([
 	"wordcount",
 ]);
 
-const camelCase = (name) => name.replaceAll(/-([a-z0-9])/g, (_m, c) => c.toUpperCase());
+/** A module that is not bundled: WordPress loads it as a script, the IIFE reads it off a global. */
+interface ExternalInfo {
+	/** Script handle emitted into `index.asset.php`'s dependency array. */
+	handle: string;
+	/** Browser global the module resolves to at runtime. */
+	global: string;
+}
+
+// `c` needs the annotation: replaceAll types the replacer's capture args as `...args: any[]`.
+const camelCase = (name: string): string =>
+	name.replaceAll(/-([a-z0-9])/g, (_m, c: string) => c.toUpperCase());
 
 /** Map a module id to its WordPress script handle + browser global, or null to bundle it. */
-function externalInfo(id) {
+function externalInfo(id: string): ExternalInfo | null {
 	switch (id) {
 		case "react": {
 			return { handle: "react", global: "React" };
@@ -109,11 +119,11 @@ const dataviewsCss = readFileSync(join(dataviewsDir, "build-style", "style.css")
  * `index.css` (the DataViews stylesheet). Mirrors @wordpress/scripts' output so the PHP side
  * (Admin::enqueue) is unchanged.
  */
-function wpAssets() {
+function wpAssets(): Plugin {
 	return {
 		name: "wp-assets",
 		generateBundle(_options, bundle) {
-			const handles = new Set();
+			const handles = new Set<string>();
 			let entryCode = "";
 			for (const file of Object.values(bundle)) {
 				if (file.type !== "chunk") {
@@ -138,7 +148,7 @@ function wpAssets() {
 			this.emitFile({ type: "asset", fileName: "index.asset.php", source: php });
 			this.emitFile({ type: "asset", fileName: "index.css", source: dataviewsCss });
 		},
-	} satisfies Plugin;
+	};
 }
 
 /**
