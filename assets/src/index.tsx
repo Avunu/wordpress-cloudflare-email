@@ -5,6 +5,9 @@
  * cloudflare-email/v1 REST routes. `@wordpress/dataviews` (and its non-core dependencies) are
  * bundled; everything else resolves to a core `wp.*` / React global at runtime (see
  * rolldown.config.ts).
+ *
+ * Styling is StyleX, compiled to atomic classes at build time and emitted into build/index.css.
+ * Values come from ./tokens.stylex, which maps onto the WordPress Design System.
  */
 import { createRoot, useState, useEffect, useMemo, useCallback } from "@wordpress/element";
 import type { ReactNode } from "react";
@@ -12,8 +15,11 @@ import domReady from "@wordpress/dom-ready";
 import apiFetch from "@wordpress/api-fetch";
 import { DataViews } from "@wordpress/dataviews";
 import type { View, Field, Action } from "@wordpress/dataviews";
-import { Button, Spinner, Notice, Flex, FlexItem } from "@wordpress/components";
+import { Button, Spinner, Notice } from "@wordpress/components";
 import { __, sprintf } from "@wordpress/i18n";
+import * as stylex from "@stylexjs/stylex";
+import type { StyleXStyles } from "@stylexjs/stylex";
+import { color, radius, size, space, text } from "./tokens.stylex";
 
 type Status = "sent" | "failed";
 
@@ -90,21 +96,93 @@ function formatDate(value: string): string {
 	return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 
+const styles = stylex.create({
+	// The margin lives here rather than on the <h1>, because core's `.wrap h1 { margin: 0 }` is
+	// (0,1,1) and would outrank an atomic class on the heading itself.
+	header: { marginBlockEnd: space.lg },
+
+	row: {
+		display: "flex",
+		alignItems: "flex-start",
+		justifyContent: "flex-start",
+		gap: space.lg,
+		marginBlockEnd: space.sm,
+	},
+	rowLabel: {
+		flexGrow: 0,
+		flexShrink: 0,
+		minWidth: size.detailLabel,
+		fontWeight: text.weightEmphasis,
+	},
+	rowValue: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
+	// Passed to <Row> as an override: last style wins, so this flips the justification and swaps
+	// the row's trailing margin for a leading one.
+	actions: {
+		justifyContent: "flex-end",
+		gap: space.md,
+		marginBlockStart: space.lg,
+		marginBlockEnd: 0,
+	},
+
+	badge: {
+		display: "inline-block",
+		paddingBlock: "2px",
+		paddingInline: space.sm,
+		borderRadius: radius.sm,
+		fontSize: text.sizeSm,
+		fontWeight: text.weightEmphasis,
+	},
+	badgeSent: { color: color.sentFg, backgroundColor: color.sentBg },
+	badgeFailed: { color: color.failedFg, backgroundColor: color.failedBg },
+
+	body: { marginBlockStart: space.md },
+	bodyLabel: { fontWeight: text.weightEmphasis, marginBlockEnd: space.xs },
+	bodyFrame: {
+		width: "100%",
+		height: size.bodyFrame,
+		borderWidth: "1px",
+		borderStyle: "solid",
+		borderColor: color.stroke,
+		borderRadius: radius.sm,
+		backgroundColor: color.surface,
+	},
+	bodyText: {
+		whiteSpace: "pre-wrap",
+		overflowWrap: "break-word",
+		backgroundColor: color.surfaceMuted,
+		padding: space.md,
+		borderRadius: radius.sm,
+		maxHeight: size.bodyFrame,
+		overflow: "auto",
+	},
+});
+
+/**
+ * The subset of `row` a caller may override. Anything else is a type error, so a <Row> cannot be
+ * restyled into something that is no longer a row.
+ */
+type RowStyle = StyleXStyles<{
+	gap?: string;
+	justifyContent?: "flex-start" | "flex-end";
+	marginBlockStart?: string;
+	marginBlockEnd?: string | 0;
+}>;
+
+function Row({ style, children }: { style?: RowStyle; children: ReactNode }): ReactNode {
+	return <div {...stylex.props(styles.row, style)}>{children}</div>;
+}
+
+// Exhaustive over Status: adding a third status becomes a compile error rather than silently
+// falling through to the "sent" styling.
+const BADGE_VARIANT: Readonly<Record<Status, StyleXStyles>> = {
+	sent: styles.badgeSent,
+	failed: styles.badgeFailed,
+};
+
 function StatusBadge({ status }: { status: Status }): ReactNode {
-	const failed = status === "failed";
 	return (
-		<span
-			style={{
-				display: "inline-block",
-				padding: "2px 8px",
-				borderRadius: "2px",
-				fontSize: "12px",
-				fontWeight: 600,
-				color: failed ? "#8a1f11" : "#0a5624",
-				background: failed ? "#fbeaea" : "#edf7ed",
-			}}
-		>
-			{failed ? __("Failed", "cloudflare-email") : __("Sent", "cloudflare-email")}
+		<span {...stylex.props(styles.badge, BADGE_VARIANT[status])}>
+			{status === "failed" ? __("Failed", "cloudflare-email") : __("Sent", "cloudflare-email")}
 		</span>
 	);
 }
@@ -114,10 +192,10 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }):
 		return null;
 	}
 	return (
-		<Flex align="flex-start" justify="flex-start" gap={4} style={{ marginBottom: 8 }}>
-			<FlexItem style={{ minWidth: 90, fontWeight: 600 }}>{label}</FlexItem>
-			<FlexItem isBlock>{children}</FlexItem>
-		</Flex>
+		<Row>
+			<div {...stylex.props(styles.rowLabel)}>{label}</div>
+			<div {...stylex.props(styles.rowValue)}>{children}</div>
+		</Row>
 	);
 }
 
@@ -159,35 +237,17 @@ function Detail({ log }: { log: LogDetail }): ReactNode {
 					{(log.attachments ?? []).map((a) => a.name).join(", ")}
 				</DetailRow>
 			)}
-			<div style={{ marginTop: 12 }}>
-				<div style={{ fontWeight: 600, marginBottom: 4 }}>{__("Body", "cloudflare-email")}</div>
+			<div {...stylex.props(styles.body)}>
+				<div {...stylex.props(styles.bodyLabel)}>{__("Body", "cloudflare-email")}</div>
 				{log.body_html ? (
 					<iframe
 						title={__("Email body", "cloudflare-email")}
 						sandbox=""
 						srcDoc={log.body_html}
-						style={{
-							width: "100%",
-							height: 420,
-							border: "1px solid #ddd",
-							borderRadius: 2,
-							background: "#fff",
-						}}
+						{...stylex.props(styles.bodyFrame)}
 					/>
 				) : (
-					<pre
-						style={{
-							whiteSpace: "pre-wrap",
-							wordBreak: "break-word",
-							background: "#f6f7f7",
-							padding: 12,
-							borderRadius: 2,
-							maxHeight: 420,
-							overflow: "auto",
-						}}
-					>
-						{log.body_text ?? ""}
-					</pre>
+					<pre {...stylex.props(styles.bodyText)}>{log.body_text ?? ""}</pre>
 				)}
 			</div>
 		</div>
@@ -236,9 +296,13 @@ function DeleteConfirm({
 				: api(`/logs/${items[0]?.id}`, { method: "DELETE" }));
 			onDone();
 			closeModal?.();
-		} finally {
+		} catch (error: unknown) {
+			// The reset is duplicated across both exits rather than shared in a `finally`, which
+			// React Compiler cannot lower. Rethrown so a failed delete is not swallowed silently.
 			setBusy(false);
+			throw error;
 		}
+		setBusy(false);
 	}, [items, many, closeModal, onDone]);
 
 	return (
@@ -252,14 +316,14 @@ function DeleteConfirm({
 						)
 					: __("Delete this log entry? This cannot be undone.", "cloudflare-email")}
 			</p>
-			<Flex justify="flex-end" gap={3} style={{ marginTop: 16 }}>
+			<Row style={styles.actions}>
 				<Button variant="tertiary" onClick={closeModal} disabled={busy}>
 					{__("Cancel", "cloudflare-email")}
 				</Button>
 				<Button variant="primary" isDestructive onClick={doDelete} isBusy={busy}>
 					{__("Delete", "cloudflare-email")}
 				</Button>
-			</Flex>
+			</Row>
 		</>
 	);
 }
@@ -424,9 +488,9 @@ function App(): ReactNode {
 
 	return (
 		<>
-			<h1 className="wp-heading-inline" style={{ marginBottom: 16 }}>
-				{__("Cloudflare Email log", "cloudflare-email")}
-			</h1>
+			<div {...stylex.props(styles.header)}>
+				<h1 className="wp-heading-inline">{__("Cloudflare Email log", "cloudflare-email")}</h1>
+			</div>
 			{notice && (
 				<Notice status="info" onRemove={() => setNotice(null)}>
 					{notice}

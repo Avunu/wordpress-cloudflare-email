@@ -1,5 +1,8 @@
 import { defineConfig } from "rolldown";
 import type { Plugin } from "rolldown";
+import { transformAsync } from "@babel/core";
+import styleX from "@stylexjs/babel-plugin";
+import type { Rule } from "@stylexjs/babel-plugin";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -9,8 +12,12 @@ import { createRequire } from "node:module";
  * Build config for the DataViews admin app.
  *
  * Output is a single IIFE (`build/index.js`) plus a WordPress dependency manifest
- * (`build/index.asset.php`) and the DataViews stylesheet (`build/index.css`) — matching what
- * Admin::enqueue() expects.
+ * (`build/index.asset.php`) and one stylesheet (`build/index.css`) — matching what Admin::enqueue()
+ * expects.
+ *
+ * Styling is StyleX, extracted at build time: stylexPlugin() runs the StyleX babel plugin over
+ * `assets/src` and collects the CSS rules it generates, and wpAssets() concatenates them onto the
+ * DataViews stylesheet. Nothing is injected at runtime.
  *
  * Externalization strategy: every WordPress package that WordPress core registers as a script
  * handle is externalized to its `wp.*` / React global; `@wordpress/dataviews` and its non-core
@@ -115,9 +122,63 @@ const dataviewsDir = dirname(require.resolve("@wordpress/dataviews/package.json"
 const dataviewsCss = readFileSync(join(dataviewsDir, "build-style", "style.css"), "utf8");
 
 /**
+ * CSS rules the StyleX compiler produced, keyed by module id so a `--watch` rebuild replaces a
+ * module's rules instead of appending a second copy.
+ */
+const stylexRules = new Map<string, Rule[]>();
+
+/**
+ * Compile StyleX at build time.
+ *
+ * Rolldown applies its own oxc transform _after_ the `transform` hook, so babel sees the original
+ * TSX and only needs the two syntax parsers — no TypeScript or JSX codegen happens here. Those
+ * plugins are referenced by name rather than imported because they ship no type declarations.
+ */
+function stylexPlugin(): Plugin {
+	return {
+		name: "stylex",
+		transform: {
+			filter: { id: /\/assets\/src\/.*\.tsx?$/ },
+			async handler(code, id) {
+				const result = await transformAsync(code, {
+					filename: id,
+					babelrc: false,
+					configFile: false,
+					sourceMaps: false,
+					plugins: [
+						"@babel/plugin-syntax-jsx",
+						["@babel/plugin-syntax-typescript", { isTSX: true }],
+						styleX.withOptions({
+							dev: false,
+							// Extraction only: no style tags are injected at runtime.
+							runtimeInjection: false,
+							// Keeps the `tokens.stylex` import alive once its uses compile to literals.
+							treeshakeCompensation: true,
+							// Namespaced so atomic classes cannot collide with another plugin's StyleX
+							// output on the same admin screen.
+							classNamePrefix: "cfe",
+							importSources: ["@stylexjs/stylex"],
+							// Required by defineVars: resolves `*.stylex.ts` to stable variable names.
+							unstable_moduleResolution: { type: "commonJS", rootDir: import.meta.dirname },
+						}),
+					],
+				});
+				if (!result?.code) {
+					return null;
+				}
+				const metadata = result.metadata as { stylex?: Rule[] } | undefined;
+				stylexRules.set(id, metadata?.stylex ?? []);
+				return result.code;
+			},
+		},
+	};
+}
+
+/**
  * Emit `index.asset.php` (the dependency handles the bundle imports + a content hash) and
- * `index.css` (the DataViews stylesheet). Mirrors @wordpress/scripts' output so the PHP side
- * (Admin::enqueue) is unchanged.
+ * `index.css` (the DataViews stylesheet followed by the extracted StyleX rules). Mirrors
+ *
+ * @wordpress/scripts' output so the PHP side (Admin::enqueue) stays a single style handle.
  */
 function wpAssets(): Plugin {
 	return {
@@ -140,13 +201,22 @@ function wpAssets(): Plugin {
 				}
 			}
 			const deps = [...handles].toSorted();
-			const version = createHash("sha256").update(entryCode).digest("hex").slice(0, 20);
+
+			// `false` disables @layer. A named layer ranks below *all* unlayered CSS, so layered
+			// StyleX output would lose to wp-admin.css, wp-components and the DataViews rules.
+			// Unlayered, it also outranks @wordpress/ui, which injects itself into `@layer wp-ui`.
+			const stylexCss = styleX.processStylexRules([...stylexRules.values()].flat(), false);
+			// StyleX last, so it wins equal-specificity ties against the DataViews rules above it.
+			const css = `${dataviewsCss}\n${stylexCss}`;
+
+			// Both halves feed the hash: a style-only change must still bust the asset version.
+			const version = createHash("sha256").update(entryCode).update(css).digest("hex").slice(0, 20);
 			const php = `<?php return array('dependencies' => array(${deps
 				.map((d) => `'${d}'`)
 				.join(", ")}), 'version' => '${version}');\n`;
 
 			this.emitFile({ type: "asset", fileName: "index.asset.php", source: php });
-			this.emitFile({ type: "asset", fileName: "index.css", source: dataviewsCss });
+			this.emitFile({ type: "asset", fileName: "index.css", source: css });
 		},
 	};
 }
@@ -176,7 +246,7 @@ export default defineConfig({
 		},
 	},
 	external: (id) => externalInfo(id) !== null,
-	plugins: [wpAssets()],
+	plugins: [stylexPlugin(), wpAssets()],
 	output: {
 		dir: "build",
 		format: "iife",

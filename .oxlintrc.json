@@ -38,12 +38,17 @@
 		"eslint/no-void": ["error", { "allowAsStatement": true }],
 		"max-classes-per-file": ["error", 2],
 		"new-cap": ["error", { "capIsNew": false }],
+		// One declaration per statement: each const keeps its own line, comment and diff.
+		"one-var": ["error", "never"],
 		// Members are implicitly public; only private/protected must be explicit.
 		"typescript/explicit-member-accessibility": ["error", { "accessibility": "no-public" }],
 
 		// ─── Off: platform/domain conflicts ───────────────────────────────────
 		// null is a wire value throughout (REST rows, Cloudflare JSON responses).
 		"unicorn/no-null": "off",
+		// `import * as stylex` is StyleX's canonical form. The named alternative would put a
+		// bare `props()` in a React file, where the word already means something else.
+		"import/no-namespace": "off",
 		"no-underscore-dangle": "off",
 
 		// ─── Off: redundant with the TypeScript compiler ──────────────────────
@@ -64,8 +69,11 @@
 		"react/no-multi-comp": "off",
 		// Fast Refresh is a dev-HMR concern; irrelevant to a WP admin bundle.
 		"react/only-export-components": "off",
-		// Inline styles on @wordpress/components are deliberate here.
+		// StyleX's typed style props are the styling API here: <Row style={styles.actions}>
+		// passes a compile-time-checked StyleXStyles value, not an inline style object.
 		"react/forbid-component-props": "off",
+		// `{...stylex.props(...)}` is how StyleX applies compiled classes to an element.
+		"react/jsx-props-no-spreading": "off",
 		// DataViews actions pass RenderModal components as props by contract.
 		"react/no-unstable-nested-components": ["error", { "allowAsProps": true }],
 

@@ -84,10 +84,20 @@ final class Admin
 
         wp_enqueue_style('wp-components');
         if (is_file($dir . 'build/index.css')) {
+            // 'wp-theme' is the WordPress Design System token stylesheet: it defines the
+            // --wpds-* custom properties that both the bundled DataViews rules and our own
+            // StyleX rules resolve against, with no fallback values. Filtered the same way
+            // the script handles are above, because an unregistered dependency makes
+            // WP_Dependencies drop the whole stylesheet.
+            $styleDeps = array_values(array_filter(
+                ['wp-theme', 'wp-components'],
+                static fn(string $handle): bool => wp_style_is($handle, 'registered')
+            ));
+
             wp_enqueue_style(
                 'cloudflare-email-log',
                 $url . 'build/index.css',
-                ['wp-components'],
+                $styleDeps,
                 $asset['version']
             );
         }

@@ -1,6 +1,7 @@
 // Test C — browser smoke (wp-playground + headless Chrome). The only test that reproduces
 // the actual production symptom: the log page must MOUNT the DataViews app (not render a
-// blank screen) and must not throw. Then a sent email must appear as a row in the UI.
+// blank screen) and must not throw. Then a sent email must appear as a row in the UI, styled
+// by the compiled StyleX rules.
 import { chromium } from "playwright-core";
 import { bootPlayground, phpJson, CHROME_PATH } from "./lib.mjs";
 import { tally } from "./assert.mjs";
@@ -56,12 +57,29 @@ try {
 	const dataviews = await page.locator(".dataviews-wrapper").count();
 	const rowVisible = await page.getByText("Hello from the browser test").count();
 
+	// The status badge is the one element whose colour comes entirely from StyleX. Its tokens
+	// deliberately carry no fallback values, so this is where a missing WPDS layer (the
+	// `wp-theme` stylesheet) would surface — the badge would go transparent rather than green.
+	// Asserting the *computed* colour catches that, a broken build, and a stylesheet that never
+	// got enqueued, none of which produce a console error.
+	const badge = page.locator('#cloudflare-email-log-root span[class*="cfe"]').first();
+	const badgeCount = await badge.count();
+	const badgeBg = await badge
+		.evaluate((el) => globalThis.getComputedStyle(el).backgroundColor)
+		.catch(() => "");
+
 	t.check("no uncaught page errors", pageErrors.length === 0, pageErrors.join(" | "));
 	t.check("no console errors", consoleErrors.length === 0, consoleErrors.slice(0, 3).join(" | "));
 	t.check("the mount point is not empty (not a blank page)", rootHtml.length > 0, `${rootHtml.length} chars`);
 	t.check("the log heading rendered", heading > 0);
 	t.check("the DataViews app mounted", dataviews > 0);
 	t.check("the sent email appears as a row", rowVisible > 0);
+	t.check("the status badge carries compiled StyleX classes", badgeCount > 0);
+	t.check(
+		"the status badge resolves a WPDS colour (tokens have no fallback)",
+		badgeBg !== "" && badgeBg !== "transparent" && badgeBg !== "rgba(0, 0, 0, 0)",
+		badgeBg || "(not found)",
+	);
 } catch (err) {
 	console.error(`\nUnexpected error: ${err.message}`);
 	t.check("test completed without an unexpected error", false, err.message);
