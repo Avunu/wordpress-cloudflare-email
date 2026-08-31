@@ -38,6 +38,8 @@
 		"eslint/no-void": ["error", { "allowAsStatement": true }],
 		"max-classes-per-file": ["error", 2],
 		"new-cap": ["error", { "capIsNew": false }],
+		// PascalCase for component files (the React convention), kebab-case for everything else.
+		"unicorn/filename-case": ["error", { "cases": { "kebabCase": true, "pascalCase": true } }],
 		// One declaration per statement: each const keeps its own line, comment and diff.
 		"one-var": ["error", "never"],
 		// Members are implicitly public; only private/protected must be explicit.
@@ -65,8 +67,8 @@
 		// ─── Off/adjusted: React rules that fight this app's shape ─────────────
 		// We use .tsx by design.
 		"react/jsx-filename-extension": "off",
-		// A single-file admin app is intentional (keeps the plugin surface small).
-		"react/no-multi-comp": "off",
+		// One component per file: assets/src/components holds one export each, App.tsx the screen.
+		"react/no-multi-comp": "error",
 		// Fast Refresh is a dev-HMR concern; irrelevant to a WP admin bundle.
 		"react/only-export-components": "off",
 		// StyleX's typed style props are the styling API here: <Row style={styles.actions}>
