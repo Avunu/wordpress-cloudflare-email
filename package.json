@@ -1,6 +1,6 @@
 {
 	"name": "cloudflare-email",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"private": true,
 	"description": "Admin log viewer (DataViews) for the Cloudflare Email WordPress plugin.",
 	"license": "MIT",
