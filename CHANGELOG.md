@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.0](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.1.4...v0.2.0) (2026-09-16)
+
+
+### Features
+
+* no "not configured" notice outside production ([cbadf18](https://github.com/Avunu/wordpress-cloudflare-email/commit/cbadf18b0afa952d9f46afc52def44558c92e471))
+* no "not configured" notice outside production ([8c8f2be](https://github.com/Avunu/wordpress-cloudflare-email/commit/8c8f2bea609c6ddd9a61283b9cc8ad91d6c0f83f))
+
+
+### Miscellaneous Chores
+
+* bump the npm group with 11 updates ([#28](https://github.com/Avunu/wordpress-cloudflare-email/issues/28)) ([5373a49](https://github.com/Avunu/wordpress-cloudflare-email/commit/5373a494d4e50e9f39a5c4bf7aa99d24b5af6ee9))
+* bump the npm group with 2 updates ([#25](https://github.com/Avunu/wordpress-cloudflare-email/issues/25)) ([ac7c710](https://github.com/Avunu/wordpress-cloudflare-email/commit/ac7c710b81a6197a4eb96610793734ff1e09ba60))
+* bump the npm group with 3 updates ([#26](https://github.com/Avunu/wordpress-cloudflare-email/issues/26)) ([5e602ec](https://github.com/Avunu/wordpress-cloudflare-email/commit/5e602ecbf00c156b36afb5f1bd0a0792051fec2e))
+* bump the npm group with 3 updates ([#27](https://github.com/Avunu/wordpress-cloudflare-email/issues/27)) ([7ced326](https://github.com/Avunu/wordpress-cloudflare-email/commit/7ced3266c90f4c2cf240ae89376f55ebd9db3440))
+
 ## [0.1.4](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.1.3...v0.1.4) (2026-08-31)
 
 
