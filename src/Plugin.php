@@ -30,8 +30,14 @@ final class Plugin
         }
 
         if (!Config::isConfigured()) {
-            add_action('admin_notices', [self::class, 'configNotice']);
-            return; // Do not intercept mail — WordPress sends natively.
+            // Do not intercept mail — WordPress sends natively. That is the
+            // expected state outside production (a dev shell catches mail in
+            // Mailpit; a staging site may have no account), so only production
+            // is told about it.
+            if (wp_get_environment_type() === 'production') {
+                add_action('admin_notices', [self::class, 'configNotice']);
+            }
+            return;
         }
 
         // Swap the global PHPMailer for our subclass at the very start of wp_mail().

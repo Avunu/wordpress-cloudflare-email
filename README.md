@@ -35,7 +35,7 @@ define('CLOUDFLARE_EMAIL_LOG', false);              // stop logging *successful*
 define('CLOUDFLARE_EMAIL_LOG_RETENTION_DAYS', 30);  // auto-prune window; 0 = keep forever
 ```
 
-When the required constants are absent the plugin does nothing and WordPress mail continues through its normal transport.
+When the required constants are absent the plugin does nothing and WordPress mail continues through its normal transport. In production wp-admin shows a notice saying so; outside production (`WP_ENVIRONMENT_TYPE` other than `production`) it stays quiet, since that is the expected state — a development shell catches mail in Mailpit, a staging site may have no account.
 
 If Cloudflare rejects a message (e.g. an unverified sender, or a custom header it disallows) the send is logged as **failed** and `wp_mail()` returns `false` — there is no silent fallback. To adjust the outgoing payload, filter it:
 
