@@ -23,7 +23,7 @@
 	},
 	"dependencies": {
 		"@stylexjs/stylex": "^0.19.1",
-		"@wordpress/dataviews": "^19.0.0"
+		"@wordpress/dataviews": "^19.1.0"
 	},
 	"devDependencies": {
 		"@babel/core": "^8.0.6",
@@ -33,15 +33,15 @@
 		"@types/node": "^26.6.2",
 		"@types/react": "^19.3.0",
 		"@types/react-dom": "^19.3.0",
-		"@wordpress/api-fetch": "^7.55.0",
-		"@wordpress/components": "^40.0.0",
+		"@wordpress/api-fetch": "^7.56.0",
+		"@wordpress/components": "^41.0.0",
 		"@wordpress/dom-ready": "^4.54.0",
 		"@wordpress/element": "^8.6.0",
 		"@wordpress/i18n": "^6.27.0",
 		"oxfmt": "^0.70.0",
 		"oxlint": "^1.85.0",
-		"oxlint-tsgolint": "^7.0.2002",
-		"rolldown": "^1.2.9",
+		"oxlint-tsgolint": "^7.0.2003",
+		"rolldown": "^1.2.11",
 		"typescript": "^7.0.2"
 	}
 }
