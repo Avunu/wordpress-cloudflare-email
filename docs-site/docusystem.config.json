@@ -1,0 +1,10 @@
+{
+	"$schema": "./node_modules/@avunu/docusystem/config.schema.json",
+	"name": "WordPress Cloudflare Email",
+	"tagline": "Routes all WordPress email through the Cloudflare Email Sending API and keeps a searchable log of every message, with no settings screen.",
+	"slug": "wordpress-cloudflare-email",
+	"platform": "wordpress",
+	"repo": "https://github.com/Avunu/wordpress-cloudflare-email",
+	"domain": "wordpress-cloudflare-email.avunu.net",
+	"license": "MIT"
+}
