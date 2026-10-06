@@ -22,7 +22,7 @@ This is a **separate npm package** from the repo root on purpose: its dependenci
 - For the browser test only: a Chrome/Chromium binary. Defaults to
   `/run/current-system/sw/bin/google-chrome-stable`; override with `CHROME_PATH=/path/to/chrome`.
 - PHP 8.4 is used automatically (WordPress enforces the plugin's `Requires PHP: 8.4` header on
-  activation). Target a specific WordPress version with `WP_VERSION=6.6` (default: `latest`).
+  activation). Target a specific WordPress version with `WP_VERSION=7.0` (default: `latest`).
 
 ## Tests
 
