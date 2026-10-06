@@ -9,7 +9,7 @@ Route **all** WordPress email through the [Cloudflare Email Sending API](https:/
 
 ## Requirements
 
-- WordPress 6.6+ and PHP 8.4+.
+- WordPress 7.0+ (the log viewer relies on the WordPress Design System tokens that core 7.0 ships) and PHP 8.4+.
 - A Cloudflare account with **Email Sending** enabled for your sending domain (see [Cloudflare's setup guide](https://developers.cloudflare.com/email-service/); `npx wrangler email sending enable yourdomain.com`).
 - A Cloudflare **API token** with the Email Sending permission.
 
@@ -89,6 +89,19 @@ nix build .#zip -L    # -> result/cloudflare-email.zip
 ## Releasing
 
 Commits to `main` follow [Conventional Commits](https://www.conventionalcommits.org/). [Release Please](https://github.com/googleapis/release-please) maintains a release PR; merging it bumps the version in `composer.json`, `package.json`, and the plugin header, updates `CHANGELOG.md`, tags `vX.Y.Z`, and the release workflow builds `cloudflare-email.zip` with Nix and attaches it to the GitHub Release. Client sites self-update from that asset via [plugin-update-checker](https://github.com/YahnisElsts/plugin-update-checker).
+
+## Part of the Cloudflare Email suite
+
+Four open-source projects work together to give business systems email without SMTP credentials or IMAP polling:
+
+| Project                                                                                 | Role                                                                                                                       |
+| --------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| [cloudflare-email-relay](https://github.com/Avunu/cloudflare-email-relay)               | Multi-tenant inbound Worker: stores each message in R2, then delivers it to the right system with signed, retried requests |
+| [cloudflare_email_delivery](https://github.com/Avunu/cloudflare_email_delivery)         | Frappe and ERPNext adapter                                                                                                 |
+| [mail_cloudflare](https://github.com/Avunu/avunu-odoo-addons/tree/18.0/mail_cloudflare) | Odoo adapter                                                                                                               |
+| [wordpress-cloudflare-email](https://github.com/Avunu/wordpress-cloudflare-email)       | WordPress plugin: outbound mail and a delivery log                                                                         |
+
+Need it set up for your business? [Avunu](https://avunu.net) can help.
 
 ## License
 
