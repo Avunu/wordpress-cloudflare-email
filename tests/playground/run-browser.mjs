@@ -3,7 +3,7 @@
 // blank screen) and must not throw. Then a sent email must appear as a row in the UI, styled
 // by the compiled StyleX rules.
 import { chromium } from "playwright-core";
-import { bootPlayground, phpJson, CHROME_PATH } from "./lib.mjs";
+import { bootPlayground, phpJson, CHROME_PATH, CHROME_ARGS } from "./lib.mjs";
 import { tally } from "./assert.mjs";
 
 async function login(page, url) {
@@ -11,8 +11,9 @@ async function login(page, url) {
 	if (page.url().includes("wp-login.php")) {
 		await page.fill("#user_login", "admin");
 		await page.fill("#user_pass", "password");
-		await page.click("#wp-submit");
-		await page.waitForLoadState("networkidle");
+		// Wait for the redirect into wp-admin, not for network idle: the dashboard's widgets keep
+		// requests open, and on the self-hosted runner the page never reached network idle.
+		await Promise.all([page.waitForURL(/\/wp-admin\//, { waitUntil: "load" }), page.click("#wp-submit")]);
 	}
 }
 
@@ -23,11 +24,14 @@ console.log(`Test C — browser smoke (WordPress ${process.env.WP_VERSION ?? "la
 let server;
 let browser;
 try {
-	server = await bootPlayground({ port: 9430 });
+	server = await bootPlayground();
 	const url = server.serverUrl;
-	browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
+	browser = await chromium.launch({ executablePath: CHROME_PATH, args: CHROME_ARGS, headless: true });
 
 	const page = await browser.newPage();
+	// Every request is PHP running in WebAssembly; on a loaded shared runner a single wp-admin page
+	// can take longer than Playwright's 30 s default.
+	page.setDefaultTimeout(120_000);
 	const pageErrors = [];
 	const consoleErrors = [];
 	page.on("pageerror", (e) => pageErrors.push(`${e.name}: ${e.message}`));

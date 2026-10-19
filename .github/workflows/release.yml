@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","nixos"]') }}
     steps:
       - name: Release Please
         id: release
@@ -32,7 +32,7 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
 
       - uses: DeterminateSystems/nix-installer-action@main
-        if: ${{ steps.release.outputs.release_created }}
+        if: ${{ steps.release.outputs.release_created && runner.environment == 'github-hosted' }}
 
       - name: Build plugin zip
         if: ${{ steps.release.outputs.release_created }}

@@ -16,7 +16,7 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","nixos"]') }}
     steps:
       - uses: actions/checkout@v7
 
@@ -30,18 +30,19 @@ jobs:
       - run: npm run check
 
   phpstan:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","nixos"]') }}
     steps:
       - uses: actions/checkout@v7
 
       - uses: DeterminateSystems/nix-installer-action@main
+        if: runner.environment == 'github-hosted'
 
       # Self-contained, offline: composerDeps (WordPress/WP-CLI stubs + phpstan-wordpress)
       # come from composer.lock; the phpstan binary from nixpkgs.
       - run: nix build .#checks.x86_64-linux.phpstan -L
 
   tests:
-    runs-on: ubuntu-latest
+    runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","nixos"]') }}
     steps:
       - uses: actions/checkout@v7
 
@@ -57,11 +58,17 @@ jobs:
       # vendor/autoload.php is missing, so the mounted plugin must have its Composer
       # deps installed — exactly as the shipped release zip does. PHP 8.4 matches the
       # plugin's "Requires PHP" so the platform check passes.
+      # setup-php needs sudo/apt, so it runs on GitHub-hosted runners only; the self-hosted
+      # NixOS runner takes PHP 8.4 and Composer from the flake's nixpkgs.
       - uses: shivammathur/setup-php@v2
+        if: runner.environment == 'github-hosted'
         with:
           php-version: "8.4"
           tools: composer
       - run: composer install --no-dev --no-interaction --optimize-autoloader
+        if: runner.environment == 'github-hosted'
+      - run: nix shell --inputs-from . nixpkgs#php84 nixpkgs#php84Packages.composer -c composer install --no-dev --no-interaction --optimize-autoloader
+        if: runner.environment != 'github-hosted'
 
       # Build the real plugin bundle the tests mount, then install the isolated
       # test harness (its heavy deps live outside the root/Nix lockfile).
@@ -75,8 +82,13 @@ jobs:
       - run: npm run test:e2e
 
       # C — the headless-browser render smoke that reproduces the blank page itself.
+      # The downloaded Chrome cannot run on NixOS; the self-hosted runner uses nixpkgs' Chromium.
       - uses: browser-actions/setup-chrome@v2
+        if: runner.environment == 'github-hosted'
         id: setup-chrome
+      - id: nix-chrome
+        if: runner.environment != 'github-hosted'
+        run: echo "chrome-path=$(nix build --no-link --print-out-paths --inputs-from . nixpkgs#chromium)/bin/chromium" >> "$GITHUB_OUTPUT"
       - run: npm run test:browser
         env:
-          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path || steps.nix-chrome.outputs.chrome-path }}
