@@ -18,7 +18,7 @@ console.log(`Test B — backend logging e2e (WordPress ${process.env.WP_VERSION 
 
 let server;
 try {
-	server = await bootPlayground({ port: 9420 });
+	server = await bootPlayground();
 
 	// 1. Activation created the table and stamped the schema version.
 	let r = await phpJson(
