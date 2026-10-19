@@ -92,4 +92,3 @@ jobs:
       - run: npm run test:browser
         env:
           CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path || steps.nix-chrome.outputs.chrome-path }}
-          DEBUG: pw:browser
