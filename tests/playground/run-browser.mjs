@@ -3,7 +3,7 @@
 // blank screen) and must not throw. Then a sent email must appear as a row in the UI, styled
 // by the compiled StyleX rules.
 import { chromium } from "playwright-core";
-import { bootPlayground, phpJson, CHROME_PATH } from "./lib.mjs";
+import { bootPlayground, phpJson, CHROME_PATH, CHROME_ARGS } from "./lib.mjs";
 import { tally } from "./assert.mjs";
 
 async function login(page, url) {
@@ -25,7 +25,7 @@ let browser;
 try {
 	server = await bootPlayground({ port: 9430 });
 	const url = server.serverUrl;
-	browser = await chromium.launch({ executablePath: CHROME_PATH, headless: true });
+	browser = await chromium.launch({ executablePath: CHROME_PATH, args: CHROME_ARGS, headless: true });
 
 	const page = await browser.newPage();
 	const pageErrors = [];

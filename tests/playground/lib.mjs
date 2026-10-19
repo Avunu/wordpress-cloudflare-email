@@ -12,6 +12,12 @@ export const PLUGIN_PATH = "cloudflare-email/cloudflare-email.php";
 // System Chrome (no Playwright browser download needed). Override with CHROME_PATH.
 export const CHROME_PATH = process.env.CHROME_PATH ?? "/run/current-system/sw/bin/google-chrome-stable";
 
+// The self-hosted runner's service filters the capset syscall, which kills Chromium's zygote
+// ("Did not receive ping from zygote child") and crashes the first page. Without the sandbox
+// there is nothing for the zygote to set up, so both are off; this harness only loads the
+// local playground.
+export const CHROME_ARGS = ["--no-sandbox", "--no-zygote"];
+
 /**
  * Boot a playground server with the built plugin + test mu-plugins mounted and the plugin
  * activated. The plugin requires PHP 8.4 (WordPress enforces the "Requires PHP" header on
