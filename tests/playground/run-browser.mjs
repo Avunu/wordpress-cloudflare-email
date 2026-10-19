@@ -11,8 +11,9 @@ async function login(page, url) {
 	if (page.url().includes("wp-login.php")) {
 		await page.fill("#user_login", "admin");
 		await page.fill("#user_pass", "password");
-		await page.click("#wp-submit");
-		await page.waitForLoadState("networkidle");
+		// Wait for the redirect into wp-admin, not for network idle: the dashboard's widgets keep
+		// requests open, and on the self-hosted runner the page never reached network idle.
+		await Promise.all([page.waitForURL(/\/wp-admin\//, { waitUntil: "load" }), page.click("#wp-submit")]);
 	}
 }
 
