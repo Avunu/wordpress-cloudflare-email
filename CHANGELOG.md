@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.2.1...v0.2.2) (2026-10-23)
+
+
+### Miscellaneous Chores
+
+* bump Avunu/site-docs/.github/workflows/check-docs.yml ([#50](https://github.com/Avunu/wordpress-cloudflare-email/issues/50)) ([3246ab7](https://github.com/Avunu/wordpress-cloudflare-email/commit/3246ab79ba4a57f1db400024f1ee26e44f7ea329))
+* bump the npm group with 2 updates ([#51](https://github.com/Avunu/wordpress-cloudflare-email/issues/51)) ([3f3e88c](https://github.com/Avunu/wordpress-cloudflare-email/commit/3f3e88c4610f7853e25b7f3b43ae30b1cf5675c9))
+
 ## [0.2.1](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.2.0...v0.2.1) (2026-10-19)
 
 
