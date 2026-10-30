@@ -38,8 +38,8 @@
 		"@wordpress/dom-ready": "^5.0.0",
 		"@wordpress/element": "^10.0.0",
 		"@wordpress/i18n": "^7.0.0",
-		"oxfmt": "^0.74.0",
-		"oxlint": "^1.89.0",
+		"oxfmt": "^0.75.0",
+		"oxlint": "^1.90.0",
 		"oxlint-tsgolint": "^7.0.2005",
 		"rolldown": "^1.2.15",
 		"typescript": "^7.0.2"
