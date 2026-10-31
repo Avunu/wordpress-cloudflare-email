@@ -87,7 +87,111 @@ try {
 	);
 	t.check("send after heal logs a row", r.sent && r.count >= 1, `count=${r.count}`);
 
-	// 6. Hardening: with the script not enqueued (Admin::$assetsReady still false, as it
+	// 6. A suppressed recipient: Cloudflare rejects the whole message, so the mailer looks up the
+	// suppression list, drops that address, re-sends with the rest of the To/Cc/Bcc intact, logs
+	// 'partial', and tells the site admin.
+	r = await phpJson(
+		server,
+		`wp_set_current_user(1);
+		$GLOBALS['cloudflare_email_mock_sends'] = [];
+		$sent = wp_mail(
+			['one@example.com', 'Sup <SUPPRESSED@example.com>'],
+			'Partial subject',
+			'body',
+			['Cc: two@example.com', 'Bcc: three@example.com']
+		);
+		$t = $wpdb->prefix . 'cloudflare_email_log';
+		$id = (int) $wpdb->get_var("SELECT id FROM $t WHERE subject = 'Partial subject'");
+		$log = \\CloudflareEmail\\Log::find($id);
+		return [
+			'sent'       => (bool) $sent,
+			'calls'      => $GLOBALS['cloudflare_email_mock_sends'],
+			'admin'      => get_option('admin_email'),
+			'id'         => $id,
+			'status'     => $log['status'],
+			'error'      => $log['error'],
+			'suppressed' => $log['suppressed'],
+		];`,
+	);
+	const [first, retry, notice] = r.calls ?? [];
+	t.check("wp_mail() returns true when only a suppressed recipient is dropped", r.sent);
+	t.check(
+		"the first attempt carries every recipient in one message",
+		JSON.stringify(first?.to) === JSON.stringify(["one@example.com", "Sup <SUPPRESSED@example.com>"]) &&
+			JSON.stringify(first?.cc) === JSON.stringify(["two@example.com"]),
+		JSON.stringify(first),
+	);
+	t.check(
+		"the retry drops only the suppressed recipient and keeps Cc/Bcc",
+		JSON.stringify(retry) ===
+			JSON.stringify({ to: ["one@example.com"], cc: ["two@example.com"], bcc: ["three@example.com"], subject: "Partial subject" }),
+		JSON.stringify(retry),
+	);
+	t.check("the send is logged as 'partial'", r.status === "partial", `status=${r.status}`);
+	t.check(
+		"the log names the suppressed recipient",
+		JSON.stringify(r.suppressed) === JSON.stringify(["suppressed@example.com"]) && /suppressed@example\.com/.test(r.error),
+		`${JSON.stringify(r.suppressed)} / ${r.error}`,
+	);
+	t.check(
+		"the site admin is notified",
+		r.calls.length === 3 && notice?.to?.[0] === r.admin && /suppressed recipient/.test(notice?.subject),
+		JSON.stringify(notice),
+	);
+
+	// 7. Resending a partial entry retries only the suppressed recipient, sends no admin notice, and
+	// keeps the row 'partial' while that address is still suppressed.
+	const partialId = r.id;
+	r = await phpJson(
+		server,
+		`wp_set_current_user(1);
+		$GLOBALS['cloudflare_email_mock_sends'] = [];
+		$res = rest_do_request(new WP_REST_Request('POST', '/cloudflare-email/v1/logs/${partialId}/resend'));
+		$log = \\CloudflareEmail\\Log::find(${partialId});
+		return [
+			'http'       => $res->get_status(),
+			'calls'      => $GLOBALS['cloudflare_email_mock_sends'],
+			'status'     => $log['status'],
+			'resent'     => $log['resent_count'],
+			'suppressed' => $log['suppressed'],
+		];`,
+	);
+	t.check(
+		"resend of a partial entry only retries the suppressed recipient",
+		r.calls.length === 1 && JSON.stringify(r.calls[0].to) === JSON.stringify(["suppressed@example.com"]),
+		JSON.stringify(r.calls),
+	);
+	t.check("a resend that is still refused reports an error", r.http === 502, `http=${r.http}`);
+	t.check(
+		"the row stays 'partial' and still names the suppressed recipient",
+		r.status === "partial" && r.resent === 1 && r.suppressed?.[0] === "suppressed@example.com",
+		`status=${r.status}, resent=${r.resent}, suppressed=${JSON.stringify(r.suppressed)}`,
+	);
+
+	// 8. When the suppression list cannot be read, the message is not sent; the failure says why
+	// and the admin is still told.
+	r = await phpJson(
+		server,
+		`$GLOBALS['cloudflare_email_mock_sends'] = [];
+		$GLOBALS['cloudflare_email_mock_forbid_suppressions'] = true;
+		$sent = wp_mail(['one@example.com', 'suppressed@example.com'], 'Unidentified', 'body');
+		$t = $wpdb->prefix . 'cloudflare_email_log';
+		$row = $wpdb->get_row("SELECT status, error FROM $t WHERE subject = 'Unidentified'", ARRAY_A);
+		return ['sent' => (bool) $sent, 'calls' => $GLOBALS['cloudflare_email_mock_sends'], 'row' => $row];`,
+	);
+	t.check("wp_mail() returns false when the suppressed recipient cannot be identified", !r.sent);
+	t.check(
+		"logged as 'failed' with the reason",
+		r.row?.status === "failed" && /could not read the suppression list/.test(r.row?.error),
+		JSON.stringify(r.row),
+	);
+	t.check(
+		"the admin is told the message went to nobody",
+		r.calls.length === 2 && /rejected/.test(r.calls[1].subject),
+		JSON.stringify(r.calls.map((c) => c.subject)),
+	);
+
+	// 9. Hardening: with the script not enqueued (Admin::$assetsReady still false, as it
 	// would be for a missing/broken build), render() shows an error notice — not a blank page.
 	r = await phpJson(
 		server,

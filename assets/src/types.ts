@@ -1,6 +1,6 @@
 /** Shapes returned by the cloudflare-email/v1 REST routes. */
 
-export type Status = "sent" | "failed";
+export type Status = "sent" | "partial" | "failed";
 
 export interface LogItem {
 	id: number;
@@ -32,6 +32,8 @@ export interface LogDetail extends LogItem {
 	headers: LogHeaders;
 	attachments: LogAttachment[];
 	cf_result: unknown;
+	/** Suppressed recipients that were dropped so the message could go to everyone else. */
+	suppressed: string[];
 	error: string | null;
 }
 

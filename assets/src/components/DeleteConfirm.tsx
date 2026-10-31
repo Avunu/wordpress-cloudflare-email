@@ -21,15 +21,18 @@ const styles = stylex.create({
 
 /**
  * Confirms deletion of one or more entries. Rendered inside the Modal that DataViews provides for a
- * RenderModal action.
+ * RenderModal action, or inline in the detail view — which passes `onCancel` so Cancel returns to
+ * the detail instead of closing the modal.
  */
 export function DeleteConfirm({
 	items,
 	closeModal,
+	onCancel = closeModal,
 	onDone,
 }: {
 	items: LogItem[];
 	closeModal?: () => void;
+	onCancel?: () => void;
 	onDone: () => void;
 }): ReactNode {
 	const [busy, setBusy] = useState(false);
@@ -67,7 +70,7 @@ export function DeleteConfirm({
 					: __("Delete this log entry? This cannot be undone.", "cloudflare-email")}
 			</p>
 			<Row style={styles.actions}>
-				<Button variant="tertiary" onClick={closeModal} disabled={busy}>
+				<Button variant="tertiary" onClick={onCancel} disabled={busy}>
 					{__("Cancel", "cloudflare-email")}
 				</Button>
 				<Button variant="primary" isDestructive onClick={doDelete} isBusy={busy}>

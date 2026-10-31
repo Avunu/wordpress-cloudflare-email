@@ -6,7 +6,7 @@ import type { Action, Field, View } from "@wordpress/dataviews";
 import { __ } from "@wordpress/i18n";
 import * as stylex from "@stylexjs/stylex";
 import { space } from "./tokens.stylex";
-import { api } from "./api";
+import { api, errorMessage, resendLog } from "./api";
 import { formatDate } from "./format";
 import type { LogItem, LogListResponse } from "./types";
 import { DeleteConfirm } from "./components/DeleteConfirm";
@@ -21,6 +21,7 @@ const styles = stylex.create({
 
 const STATUS_ELEMENTS = [
 	{ value: "sent", label: __("Sent", "cloudflare-email") },
+	{ value: "partial", label: __("Partial", "cloudflare-email") },
 	{ value: "failed", label: __("Failed", "cloudflare-email") },
 ];
 
@@ -86,11 +87,7 @@ export function App(): ReactNode {
 			})
 			.catch((error: unknown) => {
 				if (!cancelled) {
-					setNotice(
-						error instanceof Error
-							? error.message
-							: __("Failed to load the email log.", "cloudflare-email"),
-					);
+					setNotice(errorMessage(error, __("Failed to load the email log.", "cloudflare-email")));
 				}
 			})
 			.finally(() => {
@@ -148,25 +145,20 @@ export function App(): ReactNode {
 				label: __("View", "cloudflare-email"),
 				isPrimary: true,
 				modalHeader: __("Email details", "cloudflare-email"),
-				RenderModal: ({ items }) => <DetailView id={items[0].id} />,
+				// Near full-screen, so the email body renders at the width it was designed for.
+				modalSize: "fill",
+				RenderModal: ({ items, closeModal }) => (
+					<DetailView id={items[0].id} closeModal={closeModal} onChanged={refresh} />
+				),
 			},
 			{
 				id: "resend",
 				label: __("Resend", "cloudflare-email"),
 				callback: (items) => {
-					void (async () => {
-						try {
-							await api(`/logs/${items[0].id}/resend`, {
-								method: "POST",
-							});
-							setNotice(__("Email resent.", "cloudflare-email"));
-						} catch (error: unknown) {
-							setNotice(
-								error instanceof Error ? error.message : __("Resend failed.", "cloudflare-email"),
-							);
-						}
+					void resendLog(items[0].id).then(({ message }) => {
+						setNotice(message);
 						refresh();
-					})();
+					});
 				},
 			},
 			{

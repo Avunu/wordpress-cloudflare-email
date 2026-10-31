@@ -1,7 +1,7 @@
 // Test C — browser smoke (wp-playground + headless Chrome). The only test that reproduces
 // the actual production symptom: the log page must MOUNT the DataViews app (not render a
 // blank screen) and must not throw. Then a sent email must appear as a row in the UI, styled
-// by the compiled StyleX rules.
+// by the compiled StyleX rules, and open in a detail modal that carries the row actions.
 import { chromium } from "playwright-core";
 import { bootPlayground, phpJson, CHROME_PATH, CHROME_ARGS } from "./lib.mjs";
 import { tally } from "./assert.mjs";
@@ -72,6 +72,19 @@ try {
 		.evaluate((el) => globalThis.getComputedStyle(el).backgroundColor)
 		.catch(() => "");
 
+	// The detail modal: wide enough for a typical email layout (the body iframe used to be squeezed
+	// to ~770 px, cutting a 900 px-wide message off), with the row actions available inside it.
+	await page.getByRole("button", { name: "Actions" }).first().click();
+	await page.getByRole("menuitem", { name: "View" }).click();
+	const modal = page.locator(".components-modal__frame");
+	await modal.locator("iframe").waitFor();
+	const frameWidth = await modal
+		.locator("iframe")
+		.evaluate((el) => el.getBoundingClientRect().width)
+		.catch(() => 0);
+	const modalResend = await modal.getByRole("button", { name: "Resend" }).count();
+	const modalDelete = await modal.getByRole("button", { name: "Delete" }).count();
+
 	t.check("no uncaught page errors", pageErrors.length === 0, pageErrors.join(" | "));
 	t.check("no console errors", consoleErrors.length === 0, consoleErrors.slice(0, 3).join(" | "));
 	t.check("the mount point is not empty (not a blank page)", rootHtml.length > 0, `${rootHtml.length} chars`);
@@ -84,6 +97,8 @@ try {
 		badgeBg !== "" && badgeBg !== "transparent" && badgeBg !== "rgba(0, 0, 0, 0)",
 		badgeBg || "(not found)",
 	);
+	t.check("the email body frame is at least 900 px wide", frameWidth >= 900, `${Math.round(frameWidth)} px`);
+	t.check("the detail modal offers Resend and Delete", modalResend > 0 && modalDelete > 0);
 } catch (err) {
 	console.error(`\nUnexpected error: ${err.message}`);
 	t.check("test completed without an unexpected error", false, err.message);
