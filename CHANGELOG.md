@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.3.0](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.2.1...v0.3.0) (2026-10-31)
+
+
+### Features
+
+* drop suppressed recipients instead of failing the whole send ([#58](https://github.com/Avunu/wordpress-cloudflare-email/issues/58)) ([13f3f37](https://github.com/Avunu/wordpress-cloudflare-email/commit/13f3f3749e0a457fe30b67a1fdc42256317a0369))
+
+
+### Miscellaneous Chores
+
+* bump Avunu/site-docs/.github/workflows/check-docs.yml ([#50](https://github.com/Avunu/wordpress-cloudflare-email/issues/50)) ([3246ab7](https://github.com/Avunu/wordpress-cloudflare-email/commit/3246ab79ba4a57f1db400024f1ee26e44f7ea329))
+* bump Avunu/site-docs/.github/workflows/check-docs.yml ([#53](https://github.com/Avunu/wordpress-cloudflare-email/issues/53)) ([a578b40](https://github.com/Avunu/wordpress-cloudflare-email/commit/a578b40ef6091d614426793fc133dba3fba51801))
+* bump Avunu/site-docs/.github/workflows/check-docs.yml ([#56](https://github.com/Avunu/wordpress-cloudflare-email/issues/56)) ([aafbd17](https://github.com/Avunu/wordpress-cloudflare-email/commit/aafbd17cfc4ce789bdfb88fad81bbb21d6b4c2e8))
+* bump the npm group with 2 updates ([#51](https://github.com/Avunu/wordpress-cloudflare-email/issues/51)) ([3f3e88c](https://github.com/Avunu/wordpress-cloudflare-email/commit/3f3e88c4610f7853e25b7f3b43ae30b1cf5675c9))
+* bump the npm group with 2 updates ([#57](https://github.com/Avunu/wordpress-cloudflare-email/issues/57)) ([a24044d](https://github.com/Avunu/wordpress-cloudflare-email/commit/a24044d46dff35517580bbdeb40b2d40ff40c5b6))
+* bump the npm group with 3 updates ([#55](https://github.com/Avunu/wordpress-cloudflare-email/issues/55)) ([436d27b](https://github.com/Avunu/wordpress-cloudflare-email/commit/436d27bfcba530954dbf0f16c80102da991186de))
+* bump the npm group with 6 updates ([#54](https://github.com/Avunu/wordpress-cloudflare-email/issues/54)) ([f0e76cc](https://github.com/Avunu/wordpress-cloudflare-email/commit/f0e76ccfb4b476e3f178e1a4487f38b8e54f3da2))
+
 ## [0.2.1](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.2.0...v0.2.1) (2026-10-19)
 
 
