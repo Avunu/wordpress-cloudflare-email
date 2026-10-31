@@ -15,21 +15,25 @@ const styles = stylex.create({
 		fontWeight: text.weightEmphasis,
 	},
 	sent: { color: color.sentFg, backgroundColor: color.sentBg },
+	partial: { color: color.partialFg, backgroundColor: color.partialBg },
 	failed: { color: color.failedFg, backgroundColor: color.failedBg },
 });
 
-// Exhaustive over Status: adding a third status becomes a compile error rather than silently
-// falling through to the "sent" styling.
+// Both maps are exhaustive over Status: adding a status becomes a compile error rather than
+// silently falling through to the "sent" label and styling.
+const LABEL: Readonly<Record<Status, string>> = {
+	sent: __("Sent", "cloudflare-email"),
+	partial: __("Partial", "cloudflare-email"),
+	failed: __("Failed", "cloudflare-email"),
+};
+
 const VARIANT: Readonly<Record<Status, StyleXStyles>> = {
 	sent: styles.sent,
+	partial: styles.partial,
 	failed: styles.failed,
 };
 
 /** The coloured send-outcome pill, shown in the table and in the detail view. */
 export function StatusBadge({ status }: { status: Status }): ReactNode {
-	return (
-		<span {...stylex.props(styles.badge, VARIANT[status])}>
-			{status === "failed" ? __("Failed", "cloudflare-email") : __("Sent", "cloudflare-email")}
-		</span>
-	);
+	return <span {...stylex.props(styles.badge, VARIANT[status])}>{LABEL[status]}</span>;
 }

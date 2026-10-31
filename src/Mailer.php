@@ -29,6 +29,12 @@ final class Mailer extends PHPMailer
      * Called by core wp_mail() once this object has been fully populated.
      * Never touches SMTP/mail() — dispatches to the Cloudflare API instead.
      *
+     * The message goes out once, with To/Cc/Bcc exactly as WordPress built them.
+     * Cloudflare rejects the whole message when any recipient is on the account's
+     * suppression list, so on that error the suppressed recipients are identified,
+     * dropped, and the message is sent again to everyone else — logged as `partial`,
+     * with the site administrator told who missed out (see Notifier).
+     *
      * @throws PHPMailerException so core catches it and fires wp_mail_failed.
      */
     public function send(): bool
@@ -48,14 +54,165 @@ final class Mailer extends PHPMailer
 
         try {
             $result = Client::send($payload);
+        } catch (ApiError $e) {
+            if (!$e->has(ApiError::RECIPIENT_SUPPRESSED)) {
+                self::fail($record, $e->getMessage());
+            }
+            return $this->sendWithoutSuppressed($payload, $record, $e);
         } catch (\Throwable $e) {
-            Log::record($record, 'failed', null, $e->getMessage());
-            throw new PHPMailerException($e->getMessage(), (int) $e->getCode());
+            self::fail($record, $e->getMessage());
         }
 
         Log::record($record, 'sent', $result, null);
 
         return true;
+    }
+
+    /**
+     * Recover from a `recipient_suppressed` rejection: look up which recipients are
+     * suppressed (the error does not say), and re-send to the rest.
+     *
+     * @param array<string, mixed> $payload
+     * @param array<string, mixed> $record
+     * @throws PHPMailerException when nobody could be sent the message.
+     */
+    private function sendWithoutSuppressed(array $payload, array $record, ApiError $rejection): bool
+    {
+        try {
+            $suppressed = self::suppressedAmong(self::addresses($payload), self::domain($this->From));
+        } catch (\Throwable $lookup) {
+            $reason = sprintf('could not read the suppression list (%s)', $lookup->getMessage());
+            Notifier::unidentifiedSuppression($record, $reason);
+            self::fail($record, sprintf('%s — %s, so the message was not sent.', $rejection->getMessage(), $reason));
+        }
+
+        if ($suppressed === []) {
+            $reason = 'none of the recipients is on the suppression list';
+            Notifier::unidentifiedSuppression($record, $reason);
+            self::fail($record, sprintf('%s — %s, so the message was not sent.', $rejection->getMessage(), $reason));
+        }
+
+        $error     = 'Not delivered to suppressed recipient(s): ' . implode(', ', $suppressed);
+        $remaining = self::withoutRecipients($payload, $suppressed);
+
+        if ($remaining === null) {
+            Notifier::suppressed($record, $suppressed, false);
+            self::fail($record, $error . '. No other recipients remained.', ['suppressed' => $suppressed]);
+        }
+
+        try {
+            $result = Client::send($remaining);
+        } catch (\Throwable $e) {
+            Notifier::suppressed($record, $suppressed, false);
+            self::fail($record, sprintf('%s. Sending to the remaining recipients then failed: %s', $error, $e->getMessage()), ['suppressed' => $suppressed]);
+        }
+
+        $result['suppressed'] = $suppressed;
+        Log::record($record, 'partial', $result, $error);
+        Notifier::suppressed($record, $suppressed, true);
+
+        return true;
+    }
+
+    /**
+     * Log a failed send and raise it the way core expects.
+     *
+     * @param array<string, mixed>      $record
+     * @param array<string, mixed>|null $result
+     * @throws PHPMailerException always.
+     */
+    private static function fail(array $record, string $message, ?array $result = null): never
+    {
+        Log::record($record, 'failed', $result, $message);
+        throw new PHPMailerException($message);
+    }
+
+    /**
+     * Which of $addresses are suppressed for mail from $fromDomain: an unexpired
+     * entry scoped to the whole account, or to exactly that sending domain.
+     *
+     * @param array<int, string> $addresses Bare, lowercased addresses.
+     * @return array<int, string>
+     * @throws \RuntimeException when the list cannot be read.
+     */
+    private static function suppressedAmong(array $addresses, string $fromDomain): array
+    {
+        $suppressed = [];
+        foreach (Client::suppressions() as $entry) {
+            $email   = strtolower((string) ($entry['email'] ?? ''));
+            $expires = (string) ($entry['expires_at'] ?? '');
+            $scope   = is_array($entry['scope'] ?? null) ? $entry['scope'] : ['type' => 'account'];
+
+            $active  = $expires === '' || strtotime($expires) > time();
+            $applies = ($scope['type'] ?? 'account') === 'account'
+                || strtolower((string) ($scope['value'] ?? '')) === $fromDomain;
+
+            if ($active && $applies && in_array($email, $addresses, true)) {
+                $suppressed[$email] = $email;
+            }
+        }
+        return array_values($suppressed);
+    }
+
+    /**
+     * Every recipient's bare address, lowercased, across To/Cc/Bcc.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<int, string>
+     */
+    private static function addresses(array $payload): array
+    {
+        $out = [];
+        foreach (['to', 'cc', 'bcc'] as $field) {
+            foreach ((array) ($payload[$field] ?? []) as $recipient) {
+                $out[] = self::bareAddress((string) $recipient);
+            }
+        }
+        return array_values(array_unique($out));
+    }
+
+    /**
+     * The payload with $remove taken off To/Cc/Bcc, leaving the rest of the addressing
+     * as it was. Cloudflare requires a To, so if every To recipient was removed the Cc
+     * list moves up to To. Null when nobody visible is left to address it to.
+     *
+     * @param array<string, mixed> $payload
+     * @param array<int, string>   $remove Bare, lowercased addresses.
+     * @return array<string, mixed>|null
+     */
+    private static function withoutRecipients(array $payload, array $remove): ?array
+    {
+        foreach (['to', 'cc', 'bcc'] as $field) {
+            if (!isset($payload[$field])) {
+                continue;
+            }
+            $payload[$field] = array_values(array_filter(
+                (array) $payload[$field],
+                static fn($recipient): bool => !in_array(self::bareAddress((string) $recipient), $remove, true)
+            ));
+            if ($payload[$field] === [] && $field !== 'to') {
+                unset($payload[$field]);
+            }
+        }
+
+        if ($payload['to'] === [] && isset($payload['cc'])) {
+            $payload['to'] = $payload['cc'];
+            unset($payload['cc']);
+        }
+
+        return $payload['to'] === [] ? null : $payload;
+    }
+
+    /** "Name <a@b.c>" or "a@b.c" → "a@b.c", lowercased. */
+    private static function bareAddress(string $recipient): string
+    {
+        return strtolower(trim(preg_match('/<([^>]+)>\s*$/', $recipient, $m) ? $m[1] : $recipient));
+    }
+
+    private static function domain(string $address): string
+    {
+        $at = strrpos($address, '@');
+        return $at === false ? '' : strtolower(substr($address, $at + 1));
     }
 
     /**

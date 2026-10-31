@@ -9,11 +9,19 @@ import { DetailRow } from "./DetailRow";
 import { StatusBadge } from "./StatusBadge";
 
 const styles = stylex.create({
-	body: { marginBlockStart: space.md },
+	// A column that grows into the space DetailView gives it, so the body frame can fill the modal.
+	root: { display: "flex", flexDirection: "column", flexGrow: 1, minHeight: 0 },
+	body: {
+		display: "flex",
+		flexDirection: "column",
+		flexGrow: 1,
+		marginBlockStart: space.md,
+	},
 	bodyLabel: { fontWeight: text.weightEmphasis, marginBlockEnd: space.xs },
 	bodyFrame: {
+		flexGrow: 1,
 		width: "100%",
-		height: size.bodyFrame,
+		minHeight: size.bodyFrame,
 		borderWidth: "1px",
 		borderStyle: "solid",
 		borderColor: color.stroke,
@@ -26,7 +34,8 @@ const styles = stylex.create({
 		backgroundColor: color.surfaceMuted,
 		padding: space.md,
 		borderRadius: radius.sm,
-		maxHeight: size.bodyFrame,
+		flexGrow: 1,
+		minHeight: size.bodyFrame,
 		overflow: "auto",
 	},
 });
@@ -34,8 +43,21 @@ const styles = stylex.create({
 /** The full record for one logged email. The email body is sandboxed: it is untrusted HTML. */
 export function Detail({ log }: { log: LogDetail }): ReactNode {
 	const headers = log.headers ?? {};
+	const suppressed = log.suppressed ?? [];
 	return (
-		<div>
+		<div {...stylex.props(styles.root)}>
+			{log.status === "partial" && (
+				<Notice status="warning" isDismissible={false}>
+					{sprintf(
+						/* translators: %s: comma-separated email addresses */
+						__(
+							"Not delivered to %s: on the Cloudflare suppression list. Every other recipient received it; Resend retries only the suppressed recipients.",
+							"cloudflare-email",
+						),
+						suppressed.join(", "),
+					)}
+				</Notice>
+			)}
 			{log.status === "failed" && log.error && (
 				<Notice status="error" isDismissible={false}>
 					{log.error}

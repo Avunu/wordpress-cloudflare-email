@@ -21,6 +21,8 @@ export const color = stylex.defineVars({
 	stroke: "var(--wpds-color-stroke-surface-neutral)",
 	sentBg: "var(--wpds-color-background-surface-success)",
 	sentFg: "var(--wpds-color-foreground-content-success)",
+	partialBg: "var(--wpds-color-background-surface-warning)",
+	partialFg: "var(--wpds-color-foreground-content-warning)",
 	failedBg: "var(--wpds-color-background-surface-error)",
 	failedFg: "var(--wpds-color-foreground-content-error)",
 });

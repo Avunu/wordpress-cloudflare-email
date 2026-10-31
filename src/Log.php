@@ -29,6 +29,11 @@ final class Log
      */
     private static ?int $resendingId = null;
 
+    public static function isResending(): bool
+    {
+        return self::$resendingId !== null;
+    }
+
     public static function table(): string
     {
         global $wpdb;
@@ -91,25 +96,43 @@ final class Log
      * (status + resent_count) rather than a new row inserted.
      *
      * @param array<string, mixed> $record  From Mailer::buildRecord().
-     * @param 'sent'|'failed'       $status
-     * @param array<string, mixed>|null $result Cloudflare result object.
+     * @param 'sent'|'partial'|'failed' $status `partial`: delivered after dropping suppressed recipients.
+     * @param array<string, mixed>|null $result Cloudflare result object, plus a `suppressed` list of
+     *        the bare addresses that were dropped (when any were).
      */
     public static function record(array $record, string $status, ?array $result, ?string $error): void
     {
         global $wpdb;
 
         if (self::$resendingId !== null) {
+            $row = $wpdb->get_row($wpdb->prepare(
+                "SELECT status, cf_result_json FROM " . self::table() . " WHERE id = %d",
+                self::$resendingId
+            ), ARRAY_A);
+
+            // Resending a partial entry only retries the dropped recipients (see resend()), and
+            // everyone else already has it — so short of full success it is still partial.
+            if (($row['status'] ?? '') === 'partial' && $status !== 'sent') {
+                $status = 'partial';
+            }
+
+            $wpdb->update(
+                self::table(),
+                [
+                    'status'         => $status,
+                    'cf_result_json' => $result !== null ? (string) wp_json_encode($result) : ($row['cf_result_json'] ?? null),
+                    'error'          => $error,
+                ],
+                ['id' => self::$resendingId]
+            );
             $wpdb->query($wpdb->prepare(
-                "UPDATE " . self::table() . " SET status = %s, cf_result_json = %s, error = %s, resent_count = resent_count + 1 WHERE id = %d",
-                $status,
-                $result !== null ? (string) wp_json_encode($result) : null,
-                $error,
+                "UPDATE " . self::table() . " SET resent_count = resent_count + 1 WHERE id = %d",
                 self::$resendingId
             ));
             return;
         }
 
-        // Failures are always logged; successes only when logging is enabled.
+        // Failures (and partial deliveries) are always logged; successes only when logging is enabled.
         if ($status === 'sent' && !Config::logSuccesses()) {
             return;
         }
@@ -147,7 +170,7 @@ final class Log
         $where  = ['1=1'];
         $params = [];
 
-        if (!empty($args['status']) && in_array($args['status'], ['sent', 'failed'], true)) {
+        if (!empty($args['status']) && in_array($args['status'], ['sent', 'partial', 'failed'], true)) {
             $where[]  = 'status = %s';
             $params[] = $args['status'];
         }
@@ -227,7 +250,8 @@ final class Log
      * Re-send a logged email. Rehydrates the stored fields, re-attaches any
      * attachment files still present on disk, and runs the normal wp_mail() path
      * (which routes back through Mailer) — updating this row rather than creating
-     * a new one.
+     * a new one. A `partial` entry is re-sent only to the suppressed recipients that
+     * were dropped, since everyone else already received it.
      */
     public static function resend(int $id): bool
     {
@@ -243,6 +267,12 @@ final class Log
 
         $to          = json_decode((string) $row['to_json'], true) ?: [];
         $headersMeta = json_decode((string) $row['headers_json'], true) ?: [];
+
+        $suppressed = self::suppressed($row['cf_result_json']);
+        if ($row['status'] === 'partial' && $suppressed !== []) {
+            $to = $suppressed;
+            unset($headersMeta['cc'], $headersMeta['bcc']);
+        }
         $attachMeta  = json_decode((string) $row['attachments_json'], true) ?: [];
 
         $isHtml  = !empty($row['body_html']);
@@ -337,8 +367,22 @@ final class Log
             'headers'      => json_decode((string) $row['headers_json'], true) ?: [],
             'attachments'  => json_decode((string) $row['attachments_json'], true) ?: [],
             'cf_result'    => $row['cf_result_json'] !== null ? json_decode((string) $row['cf_result_json'], true) : null,
+            'suppressed'   => self::suppressed($row['cf_result_json']),
             'error'        => $row['error'] !== null ? (string) $row['error'] : null,
             'resent_count' => (int) $row['resent_count'],
         ];
+    }
+
+    /**
+     * The suppressed recipients Mailer dropped from this send, if any.
+     *
+     * @return array<int, string>
+     */
+    private static function suppressed(?string $resultJson): array
+    {
+        $result = $resultJson !== null ? json_decode($resultJson, true) : null;
+        return is_array($result) && is_array($result['suppressed'] ?? null)
+            ? array_values(array_map('strval', $result['suppressed']))
+            : [];
     }
 }

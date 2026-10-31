@@ -26,7 +26,7 @@ final class Rest
                 'page'     => ['type' => 'integer', 'default' => 1],
                 'per_page' => ['type' => 'integer', 'default' => 20],
                 'search'   => ['type' => 'string'],
-                'status'   => ['type' => 'string', 'enum' => ['sent', 'failed']],
+                'status'   => ['type' => 'string', 'enum' => ['sent', 'partial', 'failed']],
                 'orderby'  => ['type' => 'string'],
                 'order'    => ['type' => 'string', 'enum' => ['asc', 'desc', 'ASC', 'DESC']],
             ],
