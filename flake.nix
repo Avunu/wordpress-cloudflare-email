@@ -134,7 +134,9 @@
         composerData = builtins.fromJSON (builtins.readFile ./composer.json);
 
         pname = "cloudflare-email";
-        inherit (composerData) version;
+        # The Release Please manifest owns the version; composer.json has none,
+        # because Packagist takes versions from the git tags.
+        version = (builtins.fromJSON (builtins.readFile ./.release-please-manifest.json)).".";
         src = self;
 
         # -------------------------------------------------------------- #
@@ -194,6 +196,9 @@
             pkgs.c4.composerSetupHook
           ];
 
+          # composer.json carries no version and the sandbox has no .git.
+          COMPOSER_ROOT_VERSION = version;
+
           buildPhase = ''
             runHook preBuild
             # Install runtime PHP dependencies (plugin-update-checker)
@@ -213,8 +218,8 @@
             cp -rL src vendor "$pluginDir/"
             cp -r ${jsAssets}/. "$pluginDir/build/"
 
-            # Stamp the WordPress plugin header version from composer.json, the single
-            # source of truth (Release Please bumps it). WordPress and the update
+            # Stamp the WordPress plugin header version from the Release Please
+            # manifest, the single source of truth. WordPress and the update
             # checker read this header to detect new versions.
             sed -i -E "s|^([[:space:]]*\* Version:[[:space:]]*).*|\1${version}|" "$pluginDir/cloudflare-email.php"
 

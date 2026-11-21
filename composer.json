@@ -1,11 +1,24 @@
 {
-  "name": "wordpress/cloudflare-email",
+  "name": "avunu/cloudflare-email",
   "description": "Send all WordPress email through the Cloudflare Email Sending API, with a log of every message. Configure via wp-config.php — no admin settings.",
+  "keywords": [
+    "wordpress",
+    "wordpress-plugin",
+    "email",
+    "cloudflare"
+  ],
+  "homepage": "https://github.com/Avunu/wordpress-cloudflare-email",
   "type": "wordpress-plugin",
-  "version": "0.3.0",
   "license": "MIT",
+  "authors": [
+    {
+      "name": "Avunu LLC",
+      "email": "mail@avu.nu"
+    }
+  ],
   "require": {
     "php": ">=8.4",
+    "composer/installers": "^2.3",
     "yahnis-elsts/plugin-update-checker": "^6.0"
   },
   "require-dev": {
@@ -16,6 +29,8 @@
   "replace": {
     "phpstan/phpstan": "*"
   },
+  "minimum-stability": "stable",
+  "prefer-stable": true,
   "autoload": {
     "psr-4": {
       "CloudflareEmail\\": "src/"
@@ -23,7 +38,10 @@
   },
   "config": {
     "optimize-autoloader": true,
-    "sort-packages": true
+    "sort-packages": true,
+    "allow-plugins": {
+      "composer/installers": true
+    }
   },
   "scripts": {
     "phpstan": "phpstan analyse --memory-limit=2G"
