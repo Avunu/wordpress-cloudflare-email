@@ -1,0 +1,64 @@
+# Git hooks, run by prek (https://github.com/j178/prek) on every commit.
+# Setup: `uv tool install prek`, then `prek install`. No nix needed.
+# JS tools come from package-lock.json (run `npm ci` first). nixfmt and deadnix are the
+# published hooks at the versions the flake's nixpkgs pins.
+default_stages: [pre-commit]
+
+repos:
+  - repo: local
+    hooks:
+      - id: oxfmt
+        name: oxfmt
+        description: A fast formatter for JavaScript and TypeScript (write mode).
+        entry: ./node_modules/.bin/oxfmt
+        language: system
+        types_or: [javascript, jsx, ts, tsx]
+        exclude: ^tests/
+
+      - id: oxlint
+        name: oxlint
+        description: A fast linter for JavaScript and TypeScript.
+        entry: ./node_modules/.bin/oxlint
+        language: system
+        types_or: [javascript, jsx, ts, tsx]
+        exclude: ^tests/
+
+      # oxlint --type-aware needs its own config (.oxlintrc.typecheck.json), so it cannot
+      # share the oxlint hook above.
+      - id: oxlint-typecheck
+        name: oxlint (type-aware)
+        description: Type-aware oxlint pass against .oxlintrc.typecheck.json.
+        entry: ./node_modules/.bin/oxlint --type-aware -c .oxlintrc.typecheck.json .
+        language: system
+        files: \.tsx?$
+        pass_filenames: false
+
+      - id: tsc
+        name: tsc
+        description: TypeScript type-check (tsc --noEmit).
+        entry: ./node_modules/.bin/tsc --noEmit
+        language: system
+        files: \.tsx?$|tsconfig\.json$
+        pass_filenames: false
+
+      # rolldown.config.ts is Node-side and lives in tsconfig.node.json, not the root program.
+      - id: tsc-node
+        name: tsc (node config)
+        description: TypeScript type-check of the Node build config.
+        entry: ./node_modules/.bin/tsc --noEmit -p tsconfig.node.json
+        language: system
+        files: ^rolldown\.config\.ts$|^tsconfig(\.node)?\.json$
+        pass_filenames: false
+
+      # Not here: phpstan and statix. Each needs its tool on PATH from the nix devShell, and
+      # no locked, non-nix source exists for either. Open gaps; see the commit message.
+
+  - repo: https://github.com/NixOS/nixfmt
+    rev: v1.4.0
+    hooks:
+      - id: nixfmt
+
+  - repo: https://github.com/astro/deadnix
+    rev: v1.3.1
+    hooks:
+      - id: deadnix

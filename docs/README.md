@@ -73,6 +73,7 @@ The log viewer is a **TypeScript** DataViews app bundled with [rolldown](https:/
 direnv allow          # or: nix develop
 composer install      # PHP deps (plugin-update-checker)
 npm install           # JS deps (rolldown, typescript, oxlint, @wordpress/dataviews)
+uv tool install prek && prek install   # git hooks (.pre-commit-config.yaml); no nix needed
 npm run dev           # watch-build the DataViews app (rolldown --watch)
 npm run build         # production bundle -> build/
 npm run check         # oxfmt + oxlint + type-aware oxlint + tsc (the CI gate)
