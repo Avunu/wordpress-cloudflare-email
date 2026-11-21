@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.1](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.3.0...v0.3.1) (2026-11-06)
+
+
+### Miscellaneous Chores
+
+* bump @babel/core from 8.0.10 to 8.1.0 in the npm group ([#61](https://github.com/Avunu/wordpress-cloudflare-email/issues/61)) ([8a90679](https://github.com/Avunu/wordpress-cloudflare-email/commit/8a906790a780524733f3363d385b158efb0f73f6))
+* bump Avunu/site-docs/.github/workflows/check-docs.yml ([#60](https://github.com/Avunu/wordpress-cloudflare-email/issues/60)) ([a069083](https://github.com/Avunu/wordpress-cloudflare-email/commit/a0690837d1ccfe5c4cf5bcaaee68e1e243522002))
+* bump the npm group with 2 updates ([#62](https://github.com/Avunu/wordpress-cloudflare-email/issues/62)) ([8240401](https://github.com/Avunu/wordpress-cloudflare-email/commit/82404017177fb664d85278c8272036b937d06e53))
+* bump the npm group with 3 updates ([#59](https://github.com/Avunu/wordpress-cloudflare-email/issues/59)) ([77a7e85](https://github.com/Avunu/wordpress-cloudflare-email/commit/77a7e8568684b67af8c16ff2db86549811c918a2))
+
 ## [0.3.0](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.2.1...v0.3.0) (2026-10-31)
 
 
