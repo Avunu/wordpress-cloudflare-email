@@ -21,14 +21,6 @@
     "composer/installers": "^2.3",
     "yahnis-elsts/plugin-update-checker": "^6.0"
   },
-  "require-dev": {
-    "php-stubs/wordpress-stubs": "^6.8",
-    "php-stubs/wp-cli-stubs": "^2.12",
-    "szepeviktor/phpstan-wordpress": "^2.0"
-  },
-  "replace": {
-    "phpstan/phpstan": "*"
-  },
   "minimum-stability": "stable",
   "prefer-stable": true,
   "autoload": {
@@ -44,6 +36,6 @@
     }
   },
   "scripts": {
-    "phpstan": "phpstan analyse --memory-limit=2G"
+    "phpstan": "phpstan analyse --autoload-file=tests/tools/vendor/autoload.php --memory-limit=2G"
   }
 }

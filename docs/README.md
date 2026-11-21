@@ -80,6 +80,8 @@ The log viewer is a **TypeScript** DataViews app bundled with [rolldown](https:/
 ```bash
 direnv allow          # or: nix develop
 composer install      # PHP deps (plugin-update-checker)
+composer install --working-dir=tests/tools   # PHPStan stubs + WordPress extension
+composer phpstan      # static analysis (level 8)
 npm install           # JS deps (rolldown, typescript, oxlint, @wordpress/dataviews)
 npm run dev           # watch-build the DataViews app (rolldown --watch)
 npm run build         # production bundle -> build/

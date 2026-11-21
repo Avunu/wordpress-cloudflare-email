@@ -121,7 +121,7 @@
             phpstan = {
               enable = true;
               package = pkgs.phpstan;
-              entry = "${pkgs.phpstan}/bin/phpstan analyse --memory-limit=2G";
+              entry = "${pkgs.phpstan}/bin/phpstan analyse --autoload-file=tests/tools/vendor/autoload.php --memory-limit=2G";
               pass_filenames = false;
             };
 
@@ -177,6 +177,40 @@
         # -------------------------------------------------------------- #
         composerDeps = pkgs.c4.fetchComposerDeps {
           inherit src;
+        };
+
+        # The PHPStan inputs (WordPress/WP-CLI stubs, phpstan-wordpress) live
+        # in their own Composer project: the root composer.json is published
+        # to Packagist, and the `replace` of phpstan/phpstan they need would
+        # leak into every site that installs the plugin.
+        phpstanTools = stdenvNoCC.mkDerivation {
+          pname = "${pname}-phpstan-tools";
+          inherit version;
+          src = ./tests/tools;
+
+          composerDeps = pkgs.c4.fetchComposerDeps {
+            lockFile = ./tests/tools/composer.lock;
+          };
+
+          nativeBuildInputs = [
+            php
+            php.packages.composer
+            pkgs.c4.composerSetupHook
+          ];
+
+          buildPhase = ''
+            runHook preBuild
+            composer --no-ansi install --no-interaction
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+            mkdir -p "$out"
+            # -L: c4 installs vendor as symlinks into the store.
+            cp -rL vendor "$out/"
+            runHook postInstall
+          '';
         };
 
         # ---------------------------------------------------------------- #
@@ -251,11 +285,11 @@
 
         # ------------------------------------------------------------------ #
         # nix flake check — PHPStan type checking (level 8, WordPress-aware). #
-        # Runs offline: composerDeps contains the dev packages (WordPress /   #
-        # WP-CLI stubs + phpstan-wordpress) from composer.lock. The PHPStan   #
+        # Runs offline: phpstanTools holds the WordPress / WP-CLI stubs and   #
+        # phpstan-wordpress from tests/tools/composer.lock. The PHPStan       #
         # binary itself comes from nixpkgs: Packagist ships phpstan/phpstan   #
-        # dist-only (phar), which composition-c4 cannot fetch, so composer.json#
-        # `replace`s it and nix provides the executable.                      #
+        # dist-only (phar), which composition-c4 cannot fetch, so             #
+        # tests/tools/composer.json `replace`s it and nix provides it.        #
         # ------------------------------------------------------------------ #
         checks.phpstan = stdenvNoCC.mkDerivation {
           name = "${pname}-phpstan-${version}";
@@ -271,7 +305,11 @@
           buildPhase = ''
             runHook preBuild
             composer --no-ansi install --no-interaction
-            phpstan analyse --no-progress --no-ansi --memory-limit=2G
+            cp -rL ${phpstanTools}/vendor tests/tools/vendor
+            # --autoload-file loads the WordPress extension's rule classes
+            # before PHPStan builds its container.
+            phpstan analyse --no-progress --no-ansi --memory-limit=2G \
+              --autoload-file=tests/tools/vendor/autoload.php
             runHook postBuild
           '';
 
