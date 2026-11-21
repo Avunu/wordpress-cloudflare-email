@@ -50,8 +50,19 @@ repos:
         files: ^rolldown\.config\.ts$|^tsconfig(\.node)?\.json$
         pass_filenames: false
 
-      # Not here: phpstan and statix. Each needs its tool on PATH from the nix devShell, and
-      # no locked, non-nix source exists for either. Open gaps; see the commit message.
+      # phpstan is a locked dev dependency (composer.lock). Run `composer install` first so
+      # vendor/bin/phpstan exists. Same arguments as the old nix hook; the level and paths
+      # come from phpstan.neon.dist.
+      - id: phpstan
+        name: phpstan
+        description: Static analysis with the locked phpstan/phpstan (vendor/bin/phpstan).
+        entry: vendor/bin/phpstan analyse --memory-limit=2G
+        language: system
+        types: [php]
+        pass_filenames: false
+
+      # Not here: statix. It needs its tool on PATH from the nix devShell, and no locked, non-nix
+      # source exists for it. Open gap; see the commit message.
 
   - repo: https://github.com/NixOS/nixfmt
     rev: v1.4.0
