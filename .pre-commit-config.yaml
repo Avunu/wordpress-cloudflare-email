@@ -1,7 +1,9 @@
 # Git hooks, run by prek (https://github.com/j178/prek) on every commit.
 # Setup: `uv tool install prek`, then `prek install`. No nix needed.
-# JS tools come from package-lock.json (run `npm ci` first). nixfmt and deadnix are the
-# published hooks at the versions the flake's nixpkgs pins.
+# JS tools come from package-lock.json (run `npm ci` first). PHP tools: run `composer install`
+# in the root, then `composer install --working-dir=tests/tools`. The tools project keeps
+# phpstan out of the root composer.lock. nixfmt and deadnix are the published hooks at the
+# versions the flake's nixpkgs pins.
 default_stages: [pre-commit]
 
 repos:
@@ -50,8 +52,20 @@ repos:
         files: ^rolldown\.config\.ts$|^tsconfig(\.node)?\.json$
         pass_filenames: false
 
-      # Not here: phpstan and statix. Each needs its tool on PATH from the nix devShell, and
-      # no locked, non-nix source exists for either. Open gaps; see the commit message.
+      # phpstan comes from the locked tools project (tests/tools/composer.lock), not the root lock.
+      # Same arguments as the old nix hook. The level and paths come from phpstan.neon.dist, which
+      # phpstan reads from the repo root (the hook's working directory) and which needs the root
+      # vendor/ for its WordPress extension and stubs.
+      - id: phpstan
+        name: phpstan
+        description: Static analysis with the locked phpstan/phpstan in tests/tools.
+        entry: tests/tools/vendor/bin/phpstan analyse --memory-limit=2G
+        language: system
+        types: [php]
+        pass_filenames: false
+
+      # Not here: statix. It needs its tool on PATH from the nix devShell, and no locked, non-nix
+      # source exists for it. Open gap; see the commit message.
 
   - repo: https://github.com/NixOS/nixfmt
     rev: v1.4.0
