@@ -27,7 +27,7 @@ final class Cli
     public static function verify(): void
     {
         if (!Config::isConfigured()) {
-            WP_CLI::error('Not configured — define CLOUDFLARE_EMAIL_ACCOUNT_ID and CLOUDFLARE_EMAIL_API_TOKEN in wp-config.php.');
+            WP_CLI::error('Not configured — set CLOUDFLARE_EMAIL_ACCOUNT_ID and CLOUDFLARE_EMAIL_API_TOKEN as wp-config.php constants or environment variables.');
         }
 
         WP_CLI::log('Account ID: ' . Config::accountId());

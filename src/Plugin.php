@@ -100,7 +100,7 @@ final class Plugin
         }
         echo '<div class="notice notice-warning"><p><strong>' .
             esc_html__('Cloudflare Email', 'cloudflare-email') . ':</strong> ' .
-            esc_html__('not configured. Define CLOUDFLARE_EMAIL_ACCOUNT_ID and CLOUDFLARE_EMAIL_API_TOKEN in wp-config.php to route mail through Cloudflare.', 'cloudflare-email') .
+            esc_html__('not configured. Set CLOUDFLARE_EMAIL_ACCOUNT_ID and CLOUDFLARE_EMAIL_API_TOKEN (wp-config.php constants or environment variables) to route mail through Cloudflare.', 'cloudflare-email') .
             '</p></div>';
     }
 }

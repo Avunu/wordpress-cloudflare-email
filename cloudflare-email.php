@@ -12,8 +12,13 @@
  * Update URI:        https://github.com/Avunu/wordpress-cloudflare-email
  *
  * ============================================================================
- * CONFIGURATION (wp-config.php)
+ * CONFIGURATION (wp-config.php constants or environment variables)
  * ============================================================================
+ *
+ * Every setting below can also be an environment variable of the same name,
+ * which is read when the constant is not defined (an empty value counts as
+ * unset). CLOUDFLARE_EMAIL_LOG from the environment accepts true/false, 1/0,
+ * yes/no and on/off.
  *
  * --- Required ---------------------------------------------------------------
  *   define('CLOUDFLARE_EMAIL_ACCOUNT_ID', 'your-cloudflare-account-id');
@@ -41,26 +46,37 @@ defined('WPINC') || exit;
 
 define('CLOUDFLARE_EMAIL_FILE', __FILE__);
 
+// Dependencies. The release zip bundles its own vendor/. Under Composer (a
+// Bedrock site, for example) the plugin directory has no vendor/ and the
+// project's autoloader, loaded before WordPress, already provides the classes.
 $cloudflareEmailAutoload = __DIR__ . '/vendor/autoload.php';
-if (!is_file($cloudflareEmailAutoload)) {
+if (is_file($cloudflareEmailAutoload)) {
+    require_once $cloudflareEmailAutoload;
+}
+
+if (!class_exists(\CloudflareEmail\Plugin::class)) {
     add_action('admin_notices', static function (): void {
-        echo '<div class="notice notice-error"><p><strong>Cloudflare Email:</strong> dependencies are missing — run <code>composer install</code> or install the built release zip.</p></div>';
+        echo '<div class="notice notice-error"><p><strong>Cloudflare Email:</strong> dependencies are missing — install the built release zip, or require <code>avunu/cloudflare-email</code> with Composer.</p></div>';
     });
     return;
 }
-require_once $cloudflareEmailAutoload;
 
-// Self-update from GitHub releases. The built zip attached to each release bundles
-// vendor/ and build/, so end users never need Composer or Node.
-require_once __DIR__ . '/vendor/yahnis-elsts/plugin-update-checker/plugin-update-checker.php';
+// Self-update from GitHub releases, for installs of the release zip only. The
+// built zip bundles vendor/ and build/, so end users never need Composer or
+// Node. A Composer-managed install is updated by Composer, and a site with
+// DISALLOW_FILE_MODS cannot install updates at all, so neither loads it.
+if (is_file($cloudflareEmailAutoload) && wp_is_file_mod_allowed('cloudflare_email_update_checker')) {
+    require_once __DIR__ . '/vendor/yahnis-elsts/plugin-update-checker/plugin-update-checker.php';
 
-$cloudflareEmailUpdateChecker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
-    'https://github.com/Avunu/wordpress-cloudflare-email/',
-    __FILE__,
-    'cloudflare-email'
-);
-// Download the built release asset, not GitHub's source tarball (which lacks vendor/ and build/).
-$cloudflareEmailUpdateChecker->getVcsApi()->enableReleaseAssets('/cloudflare-email\.zip$/');
+    $cloudflareEmailUpdateChecker = \YahnisElsts\PluginUpdateChecker\v6\PucFactory::buildUpdateChecker(
+        'https://github.com/Avunu/wordpress-cloudflare-email/',
+        __FILE__,
+        'cloudflare-email'
+    );
+    // Download the built release asset, not GitHub's source tarball (which lacks vendor/ and build/).
+    $cloudflareEmailUpdateChecker->getVcsApi()->enableReleaseAssets('/cloudflare-email\.zip$/');
+}
+unset($cloudflareEmailAutoload);
 
 register_activation_hook(__FILE__, [\CloudflareEmail\Plugin::class, 'activate']);
 register_deactivation_hook(__FILE__, [\CloudflareEmail\Plugin::class, 'deactivate']);
