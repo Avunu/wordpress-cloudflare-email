@@ -54,7 +54,7 @@ require_once $cloudflareEmailAutoload;
 // vendor/ and build/, so end users never need Composer or Node.
 require_once __DIR__ . '/vendor/yahnis-elsts/plugin-update-checker/plugin-update-checker.php';
 
-$cloudflareEmailUpdateChecker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+$cloudflareEmailUpdateChecker = \YahnisElsts\PluginUpdateChecker\v6\PucFactory::buildUpdateChecker(
     'https://github.com/Avunu/wordpress-cloudflare-email/',
     __FILE__,
     'cloudflare-email'
