@@ -1,0 +1,12 @@
+{
+  "name": "avunu/wordpress-cloudflare-email-tools",
+  "type": "project",
+  "description": "Locked static-analysis tools for pre-commit hooks, kept out of the root composer lock",
+  "license": "MIT",
+  "config": {
+    "sort-packages": true
+  },
+  "require-dev": {
+    "phpstan/phpstan": "2.2.16"
+  }
+}
