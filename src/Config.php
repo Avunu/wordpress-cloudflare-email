@@ -60,9 +60,14 @@ final class Config
      */
     public static function retentionDays(): int
     {
-        $value = self::value('CLOUDFLARE_EMAIL_LOG_RETENTION_DAYS');
-        if ($value !== null && is_numeric($value)) {
-            return max(0, (int) $value);
+        // A constant keeps its PHP cast, as before: false, null and '' mean 0.
+        if (defined('CLOUDFLARE_EMAIL_LOG_RETENTION_DAYS')) {
+            return max(0, (int) constant('CLOUDFLARE_EMAIL_LOG_RETENTION_DAYS'));
+        }
+
+        $env = getenv('CLOUDFLARE_EMAIL_LOG_RETENTION_DAYS');
+        if (is_string($env) && is_numeric($env)) {
+            return max(0, (int) $env);
         }
         return 30;
     }
