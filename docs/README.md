@@ -83,6 +83,7 @@ composer install      # PHP deps (plugin-update-checker)
 composer install --working-dir=tests/tools   # PHPStan stubs + WordPress extension
 composer phpstan      # static analysis (level 8)
 npm install           # JS deps (rolldown, typescript, oxlint, @wordpress/dataviews)
+uv tool install prek && prek install   # git hooks (.pre-commit-config.yaml); no nix needed
 npm run dev           # watch-build the DataViews app (rolldown --watch)
 npm run build         # production bundle -> build/
 npm run check         # oxfmt + oxlint + type-aware oxlint + tsc (the CI gate)

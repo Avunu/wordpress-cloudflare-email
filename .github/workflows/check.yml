@@ -18,9 +18,9 @@ jobs:
   check:
     runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","nixos"]') }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -32,9 +32,9 @@ jobs:
   phpstan:
     runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","nixos"]') }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
-      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/nix-installer-action@v23
         if: runner.environment == 'github-hosted'
 
       # Self-contained, offline: the WordPress/WP-CLI stubs + phpstan-wordpress come
@@ -44,9 +44,9 @@ jobs:
   tests:
     runs-on: ${{ github.event.pull_request.head.repo.fork && 'ubuntu-latest' || fromJSON('["self-hosted","nixos"]') }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@v7.1.0
         with:
           node-version: 22
           cache: npm
@@ -60,7 +60,7 @@ jobs:
       # plugin's "Requires PHP" so the platform check passes.
       # setup-php needs sudo/apt, so it runs on GitHub-hosted runners only; the self-hosted
       # NixOS runner takes PHP 8.4 and Composer from the flake's nixpkgs.
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@2.40.0
         if: runner.environment == 'github-hosted'
         with:
           php-version: "8.4"
@@ -83,7 +83,7 @@ jobs:
 
       # C — the headless-browser render smoke that reproduces the blank page itself.
       # The downloaded Chrome cannot run on NixOS; the self-hosted runner uses nixpkgs' Chromium.
-      - uses: browser-actions/setup-chrome@v2
+      - uses: browser-actions/setup-chrome@v2.2.0
         if: runner.environment == 'github-hosted'
         id: setup-chrome
       - id: nix-chrome

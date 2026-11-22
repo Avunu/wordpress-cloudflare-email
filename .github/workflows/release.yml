@@ -22,17 +22,17 @@ jobs:
     steps:
       - name: Release Please
         id: release
-        uses: googleapis/release-please-action@v5
+        uses: googleapis/release-please-action@v5.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           # Uses release-please-config.json + .release-please-manifest.json.
 
       # The remaining steps run only when a release was actually created
       # (i.e. the release PR was merged). The root package uses unprefixed outputs.
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7.0.1
         if: ${{ steps.release.outputs.release_created }}
 
-      - uses: DeterminateSystems/nix-installer-action@main
+      - uses: DeterminateSystems/nix-installer-action@v23
         if: ${{ steps.release.outputs.release_created && runner.environment == 'github-hosted' }}
 
       - name: Build plugin zip
