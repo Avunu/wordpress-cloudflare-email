@@ -33,8 +33,10 @@ updates:
     directory: /tests/tools
     schedule:
       interval: daily
+    cooldown:
+      default-days: 7
     commit-message:
-      prefix: chore
+      prefix: fix(deps)
     groups:
       composer-tools:
         patterns: ["*"]
