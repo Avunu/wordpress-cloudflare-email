@@ -1,7 +1,10 @@
 includes:
     # Bootstraps php-stubs/wordpress-stubs and adds WordPress-aware rules
-    # (hook callback signatures, dynamic return types, WP constants).
-    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+    # (hook callback signatures, dynamic return types, WP constants). Installed
+    # by the tests/tools Composer project, not the published composer.json;
+    # run with --autoload-file=tests/tools/vendor/autoload.php so its rule
+    # classes load (`composer phpstan` does).
+    - tests/tools/vendor/szepeviktor/phpstan-wordpress/extension.neon
 
 parameters:
     level: 8
@@ -10,8 +13,8 @@ parameters:
         - cloudflare-email.php
         - src/
     scanFiles:
-        - vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php
-        - vendor/php-stubs/wp-cli-stubs/wp-cli-commands-stubs.php
+        - tests/tools/vendor/php-stubs/wp-cli-stubs/wp-cli-stubs.php
+        - tests/tools/vendor/php-stubs/wp-cli-stubs/wp-cli-commands-stubs.php
     bootstrapFiles:
         - phpstan-bootstrap.php
     # PHPDoc types on third-party boundaries (PHPMailer, WP filters) are not
