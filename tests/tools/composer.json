@@ -1,0 +1,18 @@
+{
+  "name": "avunu/cloudflare-email-tools",
+  "description": "Static-analysis inputs for cloudflare-email (WordPress and WP-CLI stubs, the PHPStan WordPress extension). Deliberately separate from the plugin's composer.json: that file is published to Packagist, and the \"replace\" of phpstan/phpstan below (the PHPStan binary comes from nixpkgs, and composition-c4 cannot fetch the dist-only phpstan/phpstan package) would otherwise leak into every site that installs the plugin.",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.4",
+    "php-stubs/wordpress-stubs": "^6.8",
+    "php-stubs/wp-cli-stubs": "^2.12",
+    "szepeviktor/phpstan-wordpress": "^2.0"
+  },
+  "replace": {
+    "phpstan/phpstan": "*"
+  },
+  "config": {
+    "allow-plugins": false,
+    "sort-packages": true
+  }
+}

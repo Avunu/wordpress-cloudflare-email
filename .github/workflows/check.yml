@@ -37,8 +37,8 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@v23
         if: runner.environment == 'github-hosted'
 
-      # Self-contained, offline: composerDeps (WordPress/WP-CLI stubs + phpstan-wordpress)
-      # come from composer.lock; the phpstan binary from nixpkgs.
+      # Self-contained, offline: the WordPress/WP-CLI stubs + phpstan-wordpress come
+      # from tests/tools/composer.lock; the phpstan binary from nixpkgs.
       - run: nix build .#checks.x86_64-linux.phpstan -L
 
   tests:

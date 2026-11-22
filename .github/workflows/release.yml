@@ -1,8 +1,9 @@
 name: Release
 
 # Release Please maintains a release PR from Conventional Commits on main.
-# Merging that PR bumps composer.json + package.json + cloudflare-email.php +
-# CHANGELOG.md, creates the tag and GitHub Release (with auto-generated notes),
+# Merging that PR bumps .release-please-manifest.json + package.json +
+# cloudflare-email.php + CHANGELOG.md, creates the tag (also the Packagist
+# release: composer.json has no version) and GitHub Release (with notes),
 # then this job builds the plugin zip with Nix (PHP+composer AND node+npm) and
 # attaches it as the release asset that client sites self-update from via
 # plugin-update-checker.

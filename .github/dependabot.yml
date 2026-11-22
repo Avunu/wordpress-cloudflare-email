@@ -29,6 +29,16 @@ updates:
       composer:
         patterns: ["*"]
 
+  - package-ecosystem: composer
+    directory: /tests/tools
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: chore
+    groups:
+      composer-tools:
+        patterns: ["*"]
+
   - package-ecosystem: npm
     directory: /
     schedule:

@@ -45,7 +45,9 @@
         composerData = builtins.fromJSON (builtins.readFile ./composer.json);
 
         pname = "cloudflare-email";
-        inherit (composerData) version;
+        # The Release Please manifest owns the version; composer.json has none,
+        # because Packagist takes versions from the git tags.
+        version = (builtins.fromJSON (builtins.readFile ./.release-please-manifest.json)).".";
         src = self;
 
         # -------------------------------------------------------------- #
@@ -88,6 +90,40 @@
           inherit src;
         };
 
+        # The PHPStan inputs (WordPress/WP-CLI stubs, phpstan-wordpress) live
+        # in their own Composer project: the root composer.json is published
+        # to Packagist, and the `replace` of phpstan/phpstan they need would
+        # leak into every site that installs the plugin.
+        phpstanTools = stdenvNoCC.mkDerivation {
+          pname = "${pname}-phpstan-tools";
+          inherit version;
+          src = ./tests/tools;
+
+          composerDeps = pkgs.c4.fetchComposerDeps {
+            lockFile = ./tests/tools/composer.lock;
+          };
+
+          nativeBuildInputs = [
+            php
+            php.packages.composer
+            pkgs.c4.composerSetupHook
+          ];
+
+          buildPhase = ''
+            runHook preBuild
+            composer --no-ansi install --no-interaction
+            runHook postBuild
+          '';
+
+          installPhase = ''
+            runHook preInstall
+            mkdir -p "$out"
+            # -L: c4 installs vendor as symlinks into the store.
+            cp -rL vendor "$out/"
+            runHook postInstall
+          '';
+        };
+
         # ---------------------------------------------------------------- #
         # Final plugin assembly: composer runtime deps + compiled assets.   #
         # ---------------------------------------------------------------- #
@@ -104,6 +140,9 @@
             php.packages.composer
             pkgs.c4.composerSetupHook
           ];
+
+          # composer.json carries no version and the sandbox has no .git.
+          COMPOSER_ROOT_VERSION = version;
 
           buildPhase = ''
             runHook preBuild
@@ -124,8 +163,8 @@
             cp -rL src vendor "$pluginDir/"
             cp -r ${jsAssets}/. "$pluginDir/build/"
 
-            # Stamp the WordPress plugin header version from composer.json, the single
-            # source of truth (Release Please bumps it). WordPress and the update
+            # Stamp the WordPress plugin header version from the Release Please
+            # manifest, the single source of truth. WordPress and the update
             # checker read this header to detect new versions.
             sed -i -E "s|^([[:space:]]*\* Version:[[:space:]]*).*|\1${version}|" "$pluginDir/cloudflare-email.php"
 
@@ -160,11 +199,11 @@
 
         # ------------------------------------------------------------------ #
         # nix flake check — PHPStan type checking (level 8, WordPress-aware). #
-        # Runs offline: composerDeps contains the dev packages (WordPress /   #
-        # WP-CLI stubs + phpstan-wordpress) from composer.lock. The PHPStan   #
+        # Runs offline: phpstanTools holds the WordPress / WP-CLI stubs and   #
+        # phpstan-wordpress from tests/tools/composer.lock. The PHPStan       #
         # binary itself comes from nixpkgs: Packagist ships phpstan/phpstan   #
-        # dist-only (phar), which composition-c4 cannot fetch, so composer.json#
-        # `replace`s it and nix provides the executable.                      #
+        # dist-only (phar), which composition-c4 cannot fetch, so             #
+        # tests/tools/composer.json `replace`s it and nix provides it.        #
         # ------------------------------------------------------------------ #
         checks.phpstan = stdenvNoCC.mkDerivation {
           name = "${pname}-phpstan-${version}";
@@ -180,7 +219,11 @@
           buildPhase = ''
             runHook preBuild
             composer --no-ansi install --no-interaction
-            phpstan analyse --no-progress --no-ansi --memory-limit=2G
+            cp -rL ${phpstanTools}/vendor tests/tools/vendor
+            # --autoload-file loads the WordPress extension's rule classes
+            # before PHPStan builds its container.
+            phpstan analyse --no-progress --no-ansi --memory-limit=2G \
+              --autoload-file=tests/tools/vendor/autoload.php
             runHook postBuild
           '';
 
