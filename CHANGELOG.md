@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.4.0](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.3.0...v0.4.0) (2026-11-22)
+
+
+### Features
+
+* Composer package (avunu/cloudflare-email) with getenv config fallback ([#73](https://github.com/Avunu/wordpress-cloudflare-email/issues/73)) ([63c2678](https://github.com/Avunu/wordpress-cloudflare-email/commit/63c2678436000307df100f60ead99bc490a176d0))
+
+
+### Bug Fixes
+
+* **deps:** load plugin-update-checker v6 facade namespace ([#72](https://github.com/Avunu/wordpress-cloudflare-email/issues/72)) ([a60be41](https://github.com/Avunu/wordpress-cloudflare-email/commit/a60be41e0f4b45dc880fe61f94ca0b216a5b7f27))
+
+
+### Miscellaneous Chores
+
+* bump @babel/core from 8.0.10 to 8.1.0 in the npm group ([#61](https://github.com/Avunu/wordpress-cloudflare-email/issues/61)) ([8a90679](https://github.com/Avunu/wordpress-cloudflare-email/commit/8a906790a780524733f3363d385b158efb0f73f6))
+* bump Avunu/site-docs/.github/workflows/check-docs.yml ([#60](https://github.com/Avunu/wordpress-cloudflare-email/issues/60)) ([a069083](https://github.com/Avunu/wordpress-cloudflare-email/commit/a0690837d1ccfe5c4cf5bcaaee68e1e243522002))
+* bump the npm group with 10 updates ([#65](https://github.com/Avunu/wordpress-cloudflare-email/issues/65)) ([515e6ec](https://github.com/Avunu/wordpress-cloudflare-email/commit/515e6ecee403022850a6208e950794303360150d))
+* bump the npm group with 2 updates ([#62](https://github.com/Avunu/wordpress-cloudflare-email/issues/62)) ([8240401](https://github.com/Avunu/wordpress-cloudflare-email/commit/82404017177fb664d85278c8272036b937d06e53))
+* bump the npm group with 2 updates ([#69](https://github.com/Avunu/wordpress-cloudflare-email/issues/69)) ([ed18918](https://github.com/Avunu/wordpress-cloudflare-email/commit/ed1891859e7ca5c3f526e0e460b991f086e844b2))
+* bump the npm group with 3 updates ([#59](https://github.com/Avunu/wordpress-cloudflare-email/issues/59)) ([77a7e85](https://github.com/Avunu/wordpress-cloudflare-email/commit/77a7e8568684b67af8c16ff2db86549811c918a2))
+* bump the npm group with 3 updates ([#67](https://github.com/Avunu/wordpress-cloudflare-email/issues/67)) ([1ff91f6](https://github.com/Avunu/wordpress-cloudflare-email/commit/1ff91f6e0be48487f2a8c90c9c13b87518e716e9))
+* bump the npm group with 5 updates ([#68](https://github.com/Avunu/wordpress-cloudflare-email/issues/68)) ([a2d5346](https://github.com/Avunu/wordpress-cloudflare-email/commit/a2d53464ea722a47bf2f29f795ad0810204efaf9))
+* bump yahnis-elsts/plugin-update-checker ([#64](https://github.com/Avunu/wordpress-cloudflare-email/issues/64)) ([ddc4f8c](https://github.com/Avunu/wordpress-cloudflare-email/commit/ddc4f8cbde926a70799ca8b38984332cc8742d70))
+
 ## [0.3.0](https://github.com/Avunu/wordpress-cloudflare-email/compare/v0.2.1...v0.3.0) (2026-10-31)
 
 
